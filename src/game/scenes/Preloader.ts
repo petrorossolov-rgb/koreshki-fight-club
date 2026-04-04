@@ -29,11 +29,16 @@ export class Preloader extends Scene
 
     preload ()
     {
-        //  Load the assets for the game - Replace with your own assets
+        //  Load the assets for the game
         this.load.setPath('assets');
         this.load.image('logo', 'logo.png');
+        this.load.spritesheet('martial-hero', 'fighters/martial-hero.png', {
+            frameWidth: 126,
+            frameHeight: 126,
+        });
 
         this.load.setPath('');
+        this.load.json('char_manifest', 'data/characters/manifest.json');
         this.load.json('char_default', 'data/characters/default.json');
     }
 
