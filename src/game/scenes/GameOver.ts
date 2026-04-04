@@ -1,35 +1,63 @@
 import { Scene } from 'phaser';
 
-export class GameOver extends Scene
-{
-    camera: Phaser.Cameras.Scene2D.Camera;
-    background: Phaser.GameObjects.Image;
-    gameover_text : Phaser.GameObjects.Text;
-
-    constructor ()
-    {
+export class GameOver extends Scene {
+    constructor() {
         super('GameOver');
     }
 
-    create ()
-    {
-        this.camera = this.cameras.main
-        this.camera.setBackgroundColor(0xff0000);
+    create(data: { winner?: number }): void {
+        this.cameras.main.setBackgroundColor(0x0a0a1e);
 
-        this.background = this.add.image(512, 288, 'background');
-        this.background.setAlpha(0.5);
+        const winner = data.winner ?? 0;
 
-        this.gameover_text = this.add.text(512, 288, 'Game Over', {
-            fontFamily: 'Arial Black', fontSize: 64, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
+        // Winner text
+        const winnerText = this.add.text(512, 160, `PLAYER ${winner} WINS`, {
+            fontFamily: 'Arial Black',
+            fontSize: '56px',
+            color: '#ffcc00',
+            stroke: '#000000',
+            strokeThickness: 6,
+            align: 'center',
+        }).setOrigin(0.5);
+
+        // Scale-in animation
+        winnerText.setScale(0);
+        this.tweens.add({
+            targets: winnerText,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 500,
+            ease: 'Back.easeOut',
         });
-        this.gameover_text.setOrigin(0.5);
 
-        this.input.once('pointerdown', () => {
+        // REMATCH button
+        this.createButton(512, 310, 'REMATCH', () => {
+            this.scene.start('FightScene');
+        });
 
+        // MENU button
+        this.createButton(512, 390, 'MENU', () => {
             this.scene.start('MainMenu');
-
         });
+    }
+
+    private createButton(x: number, y: number, label: string, onClick: () => void): void {
+        const bg = this.add.rectangle(x, y, 240, 56, 0x333355)
+            .setStrokeStyle(2, 0xffffff)
+            .setInteractive({ useHandCursor: true });
+
+        this.add.text(x, y, label, {
+            fontFamily: 'Arial Black',
+            fontSize: '28px',
+            color: '#ffffff',
+        }).setOrigin(0.5);
+
+        bg.on('pointerover', () => {
+            bg.fillColor = 0x555577;
+        });
+        bg.on('pointerout', () => {
+            bg.fillColor = 0x333355;
+        });
+        bg.on('pointerdown', onClick);
     }
 }
