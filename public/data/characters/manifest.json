@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "characters": [
+    {
+      "id": "petyaj",
+      "file": "data/characters/petyaj.json",
+      "displayName": "Петяй",
+      "nickname": "Long guy",
+      "description": "Самый высокий волейболист района. Мяч подавать не надо — он и так достанет.",
+      "category": "tall",
+      "tint": 16724787,
+      "stats": { "power": 7, "speed": 5, "health": 8 }
+    },
+    {
+      "id": "denis",
+      "file": "data/characters/denis.json",
+      "displayName": "Денис",
+      "nickname": "Flinn",
+      "description": "Хоккеист-айтишник. Дебажит код клюшкой.",
+      "category": "standard",
+      "tint": 4492031,
+      "stats": { "power": 6, "speed": 7, "health": 7 }
+    },
+    {
+      "id": "serega-bigi",
+      "file": "data/characters/serega-bigi.json",
+      "displayName": "Серёга",
+      "nickname": "Bigi",
+      "description": "Огромный добряк. Обнимет так, что рёбра затрещат.",
+      "category": "big",
+      "tint": 8978312,
+      "stats": { "power": 8, "speed": 4, "health": 8 }
+    },
+    {
+      "id": "vlad",
+      "file": "data/characters/vlad.json",
+      "displayName": "Влад",
+      "nickname": "Vladi",
+      "description": "Борец-строитель. Кладёт кирпичи и соперников.",
+      "category": "standard",
+      "tint": 16750848,
+      "stats": { "power": 6, "speed": 7, "health": 7 }
+    },
+    {
+      "id": "vadim",
+      "file": "data/characters/vadim.json",
+      "displayName": "Вадим",
+      "nickname": "Vadson aka Vendetta",
+      "description": "Репер-военный. Читает рэп так, что противник сдаётся до боя.",
+      "category": "standard",
+      "tint": 7368816,
+      "stats": { "power": 7, "speed": 6, "health": 7 }
+    },
+    {
+      "id": "leha",
+      "file": "data/characters/leha.json",
+      "displayName": "Лёха",
+      "nickname": "Bolgar",
+      "description": "Тайский боксер и учитель. Ставит двойки и апперкоты.",
+      "category": "standard",
+      "tint": 16763904,
+      "stats": { "power": 6, "speed": 7, "health": 7 }
+    },
+    {
+      "id": "zhenek",
+      "file": "data/characters/zhenek.json",
+      "displayName": "Женек",
+      "nickname": "The Bird guy",
+      "description": "Спортсмен-продажник. Продаст тебе нокаут со скидкой.",
+      "category": "short",
+      "tint": 65382,
+      "stats": { "power": 5, "speed": 8, "health": 7 }
+    },
+    {
+      "id": "sanek",
+      "file": "data/characters/sanek.json",
+      "displayName": "Санек",
+      "nickname": "Grif",
+      "description": "Огромный весельчак. Смеётся даже когда бьёт.",
+      "category": "big",
+      "tint": 16776960,
+      "stats": { "power": 8, "speed": 4, "health": 8 }
+    },
+    {
+      "id": "kirill",
+      "file": "data/characters/kirill.json",
+      "displayName": "Кирилл",
+      "nickname": "Kerel",
+      "description": "Безумный дизайнер. Бьёт красиво — с анимацией и эффектами.",
+      "category": "standard",
+      "tint": 10494192,
+      "stats": { "power": 6, "speed": 7, "health": 7 }
+    },
+    {
+      "id": "valera",
+      "file": "data/characters/valera.json",
+      "displayName": "Валера",
+      "nickname": "4elover-Gora",
+      "description": "Человек-гора. Горы не ходят к Магомету — Магомет бежит от Валеры.",
+      "category": "big",
+      "tint": 8421504,
+      "stats": { "power": 8, "speed": 4, "health": 8 }
+    },
+    {
+      "id": "diman",
+      "file": "data/characters/diman.json",
+      "displayName": "Диман",
+      "nickname": "Griz",
+      "description": "Злой рыбак. Ловит рыбу и раздаёт удары.",
+      "category": "short",
+      "tint": 2263842,
+      "stats": { "power": 5, "speed": 8, "health": 7 }
+    },
+    {
+      "id": "antoha",
+      "file": "data/characters/antoha.json",
+      "displayName": "Антоха",
+      "nickname": "T. U.",
+      "description": "Боец-футболист. Пенальти пробивает по лицу.",
+      "category": "short",
+      "tint": 3394611,
+      "stats": { "power": 5, "speed": 8, "health": 7 }
+    },
+    {
+      "id": "ali",
+      "file": "data/characters/ali.json",
+      "displayName": "Али",
+      "nickname": "Ali the hit!",
+      "description": "Боксёр. Порхает как бабочка, жалит как пчела.",
+      "category": "standard",
+      "tint": 16711680,
+      "stats": { "power": 7, "speed": 5, "health": 8 }
+    },
+    {
+      "id": "serega-ermaque",
+      "file": "data/characters/serega-ermaque.json",
+      "displayName": "Серёга",
+      "nickname": "Ermaque",
+      "description": "Безумный диджей. Миксует треки и кулаки.",
+      "category": "standard",
+      "tint": 10027263,
+      "stats": { "power": 7, "speed": 5, "health": 8 }
+    },
+    {
+      "id": "timur",
+      "file": "data/characters/timur.json",
+      "displayName": "Тимур",
+      "nickname": "The punisher",
+      "description": "Безумный неформал. Наказывает всех, кто слушает попсу.",
+      "category": "standard",
+      "tint": 2631720,
+      "stats": { "power": 7, "speed": 5, "health": 8 }
+    },
+    {
+      "id": "kostyan",
+      "file": "data/characters/kostyan.json",
+      "displayName": "Костян",
+      "nickname": "Kost",
+      "description": "Безумный сноубордист. Спускается с горы прямо на тебя.",
+      "category": "standard",
+      "tint": 47359,
+      "stats": { "power": 7, "speed": 5, "health": 8 }
+    },
+    {
+      "id": "petro",
+      "file": "data/characters/petro.json",
+      "displayName": "Петро",
+      "nickname": "Petrovi4",
+      "description": "Безумный электрик. Бьёт током и по лицу.",
+      "category": "standard",
+      "tint": 16760576,
+      "stats": { "power": 7, "speed": 5, "health": 8 }
+    }
+  ]
+}
