@@ -7,6 +7,10 @@
 - **Spritesheet layout**: combined sheet with 11 columns (max frames per row), 126x126 frame size. Row * 11 = first frame index of that animation
 - **FSM key format**: `"topState/subState"` e.g. `"grounded/idle"`, `"airborne/jump"`
 - **Physics are pure functions**: no classes, no side effects beyond mutating the passed FighterState
+- **Fighter sprite origin**: `(0.5, 1)` — bottom-center for floor alignment at FLOOR_Y
+- **Animation key prefix**: `{configId}_p{playerIndex}_` avoids collisions when two fighters share a spritesheet
+- **Engine step order**: FSM tick → gravity → velocity → clampToStage → pushbox → autoFace
+- **Resolve aliases (3 places)**: `tsconfig.json` (paths), `vitest.config.ts` (resolve.alias), `vite/config.*.mjs` (resolve.alias) — all must stay in sync
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -61,3 +65,39 @@
 - **Files changed**: `public/assets/fighters/martial-hero.png`, `public/data/characters/default.json`, `scripts/combine-sprites.mjs`
 - **Learnings**: LuizMelo Martial Hero 3 (hunter variant) — 126x126 frames, no crouch animation (reused fall frame 0). itch.io packs can't be downloaded via script, sourced CC0 copies from GitHub.
 - **Patterns**: Spritesheet grid layout: 11 cols × 7 rows, frame index = row*11 + col
+
+## [2026-04-04] — [T09] Create src/game/entities/Fighter.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/game/entities/Fighter.ts`
+- **Learnings**: STATE_TO_ANIM map converts FSM keys ("grounded/idle") to config anim names ("idle"). Sprite origin set to (0.5, 1) for floor alignment.
+- **Patterns**: Animation keys prefixed with `{configId}_p{playerIndex}_` to avoid collisions between two fighters using same spritesheet.
+
+## [2026-04-04] — [T10] Create src/shared/FightEngine.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/__tests__/FightEngine.test.ts`
+- **Learnings**: FightEngine (shared) imports FighterFSM from `@game/entities/` — FSM is pure logic but lives under game/. Dependency direction is slightly awkward but works since FSM has zero Phaser imports.
+- **Patterns**: Engine step order: FSM → gravity → velocity → clampToStage → pushbox → autoFace. Hit-stop early-return skips entire step.
+
+## [2026-04-04] — [T11] Create FightScene.ts with fixed timestep loop
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts` (new), `src/game/main.ts`, `src/game/scenes/MainMenu.ts`, `src/game/scenes/Preloader.ts`, `vite/config.dev.mjs`, `vite/config.prod.mjs`, deleted `src/game/scenes/Game.ts`
+- **Learnings**: Vite configs (dev + prod) had no resolve.alias — added `@shared` and `@game` aliases to match tsconfig paths. Character JSON loaded in Preloader, spritesheet in FightScene preload.
+- **Patterns**: Vite alias config must stay in sync with tsconfig paths and vitest.config aliases (3 places total).
+
+## [2026-04-04] — [T12] Create InputManager.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/game/systems/InputManager.ts` (new), `src/game/systems/__tests__/InputManager.test.ts` (new), `src/game/scenes/FightScene.ts`
+- **Learnings**: InputManager owns Phaser Key objects — tests mock the bit-packing contract without Phaser dependency.
+- **Patterns**: P1: WASD+QE, P2: Arrows+JK. `readInput(playerIndex)` returns `InputFrame` with packed bits.
+
+## [2026-04-04] — [T13] Add attack states to FighterFSM
+- **Status**: ✅ Done
+- **Files changed**: `src/game/entities/FighterFSM.ts`, `src/game/entities/__tests__/FighterFSM.test.ts`
+- **Learnings**: frameInState increments AFTER update(), so stun/attack duration checks need `>= N` where N is the desired frame count. Stun actually lasts N+1 ticks (frames 0..N).
+- **Patterns**: `tryAttack()` helper checks PUNCH/KICK input and transitions to `grounded/attack` with `currentMove` set. Attack states are non-interruptible — must complete startup+active+recovery.
+
+## [2026-04-04] — [T14] Create CollisionSystem.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/CollisionSystem.ts` (new), `src/shared/__tests__/CollisionSystem.test.ts` (new)
+- **Learnings**: Hitbox flipping: when facing left, x offset is negated AND the box position shifts by -width to keep it on the correct side.
+- **Patterns**: `toWorldAABB()` converts local offset to world coords with flip support. `checkHit()` only returns HitResult during active frames (startup < frameInState < startup+active).
