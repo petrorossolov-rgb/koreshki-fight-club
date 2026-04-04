@@ -12,8 +12,8 @@ export interface GameRoomState {
   inputs: [number, number]; // latest bits per player
 }
 
-export function startGameRoom(room: Room, config: CharacterConfig): GameRoomState {
-  const engine = createFightEngine({ p1Config: config, p2Config: config });
+export function startGameRoom(room: Room, p1Config: CharacterConfig, p2Config: CharacterConfig): GameRoomState {
+  const engine = createFightEngine({ p1Config, p2Config });
   const grState: GameRoomState = {
     intervalId: 0,
     frameCount: 0,

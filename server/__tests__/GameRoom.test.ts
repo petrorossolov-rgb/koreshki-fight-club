@@ -93,7 +93,7 @@ function createMockRoom(): Room {
 
 Deno.test("startGameRoom creates game loop with intervalId", () => {
   const room = createMockRoom();
-  const grState = startGameRoom(room, testConfig);
+  const grState = startGameRoom(room, testConfig, testConfig);
 
   assertNotEquals(grState.intervalId, 0);
   assertEquals(grState.frameCount, 0);
@@ -104,7 +104,7 @@ Deno.test("startGameRoom creates game loop with intervalId", () => {
 
 Deno.test("stopGameRoom clears interval", () => {
   const room = createMockRoom();
-  const grState = startGameRoom(room, testConfig);
+  const grState = startGameRoom(room, testConfig, testConfig);
   assertNotEquals(grState.intervalId, 0);
 
   stopGameRoom(grState);
@@ -113,7 +113,7 @@ Deno.test("stopGameRoom clears interval", () => {
 
 Deno.test("onInput updates player input bits", () => {
   const room = createMockRoom();
-  const grState = startGameRoom(room, testConfig);
+  const grState = startGameRoom(room, testConfig, testConfig);
 
   room.onInput!(0, 17); // LEFT | PUNCH
   room.onInput!(1, 2);  // RIGHT
@@ -129,7 +129,7 @@ Deno.test("game loop increments frameCount and broadcasts state", async () => {
   const ws1 = room.players[0] as MockWS;
   const ws2 = room.players[1] as MockWS;
 
-  const grState = startGameRoom(room, testConfig);
+  const grState = startGameRoom(room, testConfig, testConfig);
 
   // Wait enough time for several ticks (~100ms = ~6 ticks at 16.67ms each)
   await new Promise((r) => setTimeout(r, 120));
@@ -155,10 +155,34 @@ Deno.test("game loop increments frameCount and broadcasts state", async () => {
 
 Deno.test("room.onDestroy stops game loop", () => {
   const room = createMockRoom();
-  const grState = startGameRoom(room, testConfig);
+  const grState = startGameRoom(room, testConfig, testConfig);
   assertNotEquals(grState.intervalId, 0);
 
   // Trigger destroy
   room.onDestroy!();
   assertEquals(grState.intervalId, 0);
+});
+
+Deno.test("startGameRoom with different configs per player", async () => {
+  const bigConfig = { ...testConfig, id: "big", maxHp: 1100, walkSpeed: 2.8 };
+  const smallConfig = { ...testConfig, id: "small", maxHp: 900, walkSpeed: 5.0 };
+  const room = createMockRoom();
+  const ws1 = room.players[0] as MockWS;
+
+  const grState = startGameRoom(room, bigConfig, smallConfig);
+
+  // Wait for a broadcast
+  await new Promise((r) => setTimeout(r, 120));
+
+  const stateUpdates = ws1.sentMessages
+    .map((m) => JSON.parse(m))
+    .filter((m: Record<string, unknown>) => m.type === "state_update");
+  assertNotEquals(stateUpdates.length, 0);
+
+  // Verify fighters have different HP from configs
+  const lastUpdate = stateUpdates[stateUpdates.length - 1];
+  assertEquals(lastUpdate.state.fighters[0].hp, 1100);
+  assertEquals(lastUpdate.state.fighters[1].hp, 900);
+
+  stopGameRoom(grState);
 });

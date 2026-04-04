@@ -99,13 +99,21 @@ function handleWebSocket(ws: WebSocket): void {
     switch (msg.type) {
       case "create_room": {
         const room = createRoom(ws);
-        room.onFightStart = (r) => startGameRoom(r, defaultConfig);
+        room.onFightStart = (r) => {
+          const p1 = getCharConfig(r.selectedChars[0]!) ?? defaultConfig;
+          const p2 = getCharConfig(r.selectedChars[1]!) ?? defaultConfig;
+          startGameRoom(r, p1, p2);
+        };
         break;
       }
       case "join_room": {
         const room = joinRoom(ws, msg.code);
         if (room && !room.onFightStart) {
-          room.onFightStart = (r) => startGameRoom(r, defaultConfig);
+          room.onFightStart = (r) => {
+            const p1 = getCharConfig(r.selectedChars[0]!) ?? defaultConfig;
+            const p2 = getCharConfig(r.selectedChars[1]!) ?? defaultConfig;
+            startGameRoom(r, p1, p2);
+          };
         }
         break;
       }
