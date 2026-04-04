@@ -188,7 +188,7 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         clampToStage(f2, configs[1].pushbox);
 
         // 4. Pushbox resolution
-        resolvePushboxes(f1, f2, configs[0].pushbox);
+        resolvePushboxes(f1, f2, configs[0].pushbox, configs[1].pushbox);
 
         // 5. Auto-face opponent
         autoFace(f1, f2);

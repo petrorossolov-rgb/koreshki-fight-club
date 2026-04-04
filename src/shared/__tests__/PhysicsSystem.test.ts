@@ -73,7 +73,7 @@ describe('resolvePushboxes', () => {
     it('separates overlapping fighters', () => {
         const f1 = makeFighter({ x: 200 });
         const f2 = makeFighter({ x: 230 }); // overlap = 60 - 30 = 30
-        resolvePushboxes(f1, f2, pushbox);
+        resolvePushboxes(f1, f2, pushbox, pushbox);
         expect(f1.x).toBeLessThan(200);
         expect(f2.x).toBeGreaterThan(230);
         // After resolution, pushboxes should not overlap
@@ -84,8 +84,33 @@ describe('resolvePushboxes', () => {
     it('does nothing for non-overlapping fighters', () => {
         const f1 = makeFighter({ x: 100 });
         const f2 = makeFighter({ x: 300 });
-        resolvePushboxes(f1, f2, pushbox);
+        resolvePushboxes(f1, f2, pushbox, pushbox);
         expect(f1.x).toBe(100);
         expect(f2.x).toBe(300);
+    });
+
+    it('handles asymmetric pushboxes (big vs small)', () => {
+        const bigPush: AABB = { x: -28, y: -112, width: 56, height: 112 };
+        const smallPush: AABB = { x: -19, y: -77, width: 38, height: 77 };
+        // Place them overlapping: big halfW=28, small halfW=19, total=47
+        // At distance 30, overlap = 47 - 30 = 17
+        const f1 = makeFighter({ x: 200 });
+        const f2 = makeFighter({ x: 230 });
+        resolvePushboxes(f1, f2, bigPush, smallPush);
+        expect(f1.x).toBeLessThan(200);
+        expect(f2.x).toBeGreaterThan(230);
+        // Each pushed by half the overlap
+        const gap = (f2.x - smallPush.width / 2) - (f1.x + bigPush.width / 2);
+        expect(gap).toBeGreaterThanOrEqual(-0.001);
+    });
+
+    it('handles same position with different pushbox sizes', () => {
+        const bigPush: AABB = { x: -28, y: -112, width: 56, height: 112 };
+        const smallPush: AABB = { x: -19, y: -77, width: 38, height: 77 };
+        const f1 = makeFighter({ x: 500 });
+        const f2 = makeFighter({ x: 500 });
+        resolvePushboxes(f1, f2, bigPush, smallPush);
+        // Should separate symmetrically by half overlap
+        expect(Math.abs(f2.x - f1.x)).toBeGreaterThan(0);
     });
 });

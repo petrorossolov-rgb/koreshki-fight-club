@@ -42,14 +42,16 @@ export function clampToStage(f: FighterState, pushbox: AABB): void {
 export function resolvePushboxes(
     f1: FighterState,
     f2: FighterState,
-    pushbox: AABB,
+    pushbox1: AABB,
+    pushbox2: AABB,
 ): void {
-    const halfW = pushbox.width / 2;
+    const halfW1 = pushbox1.width / 2;
+    const halfW2 = pushbox2.width / 2;
 
-    const left1 = f1.x - halfW;
-    const right1 = f1.x + halfW;
-    const left2 = f2.x - halfW;
-    const right2 = f2.x + halfW;
+    const left1 = f1.x - halfW1;
+    const right1 = f1.x + halfW1;
+    const left2 = f2.x - halfW2;
+    const right2 = f2.x + halfW2;
 
     const overlap = Math.min(right1, right2) - Math.max(left1, left2);
 
