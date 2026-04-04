@@ -1,8 +1,9 @@
 import { TopState, RoundPhase } from './types';
 import type { FighterState, GameState, CharacterConfig } from './types';
-import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP } from './constants';
+import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES } from './constants';
 import { applyGravity, applyVelocity, clampToStage, resolvePushboxes } from './PhysicsSystem';
-import { tickFSM } from '@game/entities/FighterFSM';
+import { tickFSM, transition } from '@game/entities/FighterFSM';
+import { checkHit } from './CollisionSystem';
 
 // ── Factory ─────────────────────────────────────────────────────────
 
@@ -31,6 +32,8 @@ export function createInitialFighterState(
         subState: 'idle',
         frameInState: 0,
         currentMove: null,
+        hitConfirmed: false,
+        stunDuration: 0,
         hitStopFrames: 0,
         roundWins: 0,
     };
@@ -64,6 +67,51 @@ function autoFace(f1: FighterState, f2: FighterState): void {
         f2.facingRight = true;
     }
     // If equal x, keep current facing
+}
+
+// ── Hit processing ─────────────────────────────────────────────────
+
+function applyHit(
+    attacker: FighterState,
+    defender: FighterState,
+    hit: import('./types').HitResult,
+    defenderCfg: CharacterConfig,
+    state: GameState,
+): void {
+    attacker.hitConfirmed = true;
+
+    // Damage
+    defender.hp = Math.max(0, defender.hp - hit.damage);
+
+    // Hitstun — store duration on defender, transition to hitstun
+    defender.stunDuration = hit.hitStunFrames;
+    transition(defender, defenderCfg, TopState.Hitstun, 'standing');
+
+    // Knockback (after transition so it overrides enter's velX=0)
+    defender.velX = hit.knockbackX / defenderCfg.weight;
+    defender.velY = hit.knockbackY;
+
+    // Global hit-stop
+    state.hitStop = HIT_STOP_FRAMES;
+}
+
+function processHits(
+    state: GameState,
+    configs: [CharacterConfig, CharacterConfig],
+): void {
+    const [f1, f2] = state.fighters;
+
+    // Check P1 hitting P2
+    if (!f1.hitConfirmed) {
+        const hit = checkHit(f1, configs[0], f2, configs[1], 0, 1);
+        if (hit) applyHit(f1, f2, hit, configs[1], state);
+    }
+
+    // Check P2 hitting P1
+    if (!f2.hitConfirmed) {
+        const hit = checkHit(f2, configs[1], f1, configs[0], 1, 0);
+        if (hit) applyHit(f2, f1, hit, configs[0], state);
+    }
 }
 
 // ── Engine ──────────────────────────────────────────────────────────
@@ -102,7 +150,10 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         // 5. Auto-face opponent
         autoFace(f1, f2);
 
-        // 6. Advance phase frame counter
+        // 6. Hit detection
+        processHits(state, configs);
+
+        // 7. Advance phase frame counter
         state.phaseFrames++;
     }
 

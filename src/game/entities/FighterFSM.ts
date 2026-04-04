@@ -143,6 +143,7 @@ const attack: StateHandler = {
     },
     exit(f) {
         f.currentMove = null;
+        f.hitConfirmed = false;
     },
 };
 
@@ -163,25 +164,21 @@ const block: StateHandler = {
 const hitstunStanding: StateHandler = {
     enter(f) { f.velX = 0; },
     update(f, _bits, cfg) {
-        const move = f.currentMove ? cfg.moves[f.currentMove] ?? null : null;
-        const stunFrames = move ? move.hitStunFrames : 12;
-        if (f.frameInState >= stunFrames) {
+        if (f.frameInState >= f.stunDuration) {
             transition(f, cfg, TopState.Grounded, 'idle');
         }
     },
-    exit(f) { f.currentMove = null; },
+    exit(f) { f.currentMove = null; f.stunDuration = 0; },
 };
 
 const blockstunStanding: StateHandler = {
     enter(f) { f.velX = 0; },
     update(f, _bits, cfg) {
-        const move = f.currentMove ? cfg.moves[f.currentMove] ?? null : null;
-        const stunFrames = move ? move.blockStunFrames : 8;
-        if (f.frameInState >= stunFrames) {
+        if (f.frameInState >= f.stunDuration) {
             transition(f, cfg, TopState.Grounded, 'idle');
         }
     },
-    exit(f) { f.currentMove = null; },
+    exit(f) { f.currentMove = null; f.stunDuration = 0; },
 };
 
 const knockdownFalling: StateHandler = {

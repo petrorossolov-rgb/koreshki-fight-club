@@ -9,6 +9,7 @@ function makeFighter(overrides: Partial<FighterState> = {}): FighterState {
         hp: 1000, facingRight: true,
         topState: TopState.Grounded, subState: 'idle',
         frameInState: 0, currentMove: null,
+        hitConfirmed: false, stunDuration: 0,
         hitStopFrames: 0, roundWins: 0,
         ...overrides,
     };
@@ -170,13 +171,13 @@ describe('FighterFSM', () => {
         expect(f.currentMove).toBeNull();
     });
 
-    it('hitstun/standing -> idle after hitStunFrames', () => {
+    it('hitstun/standing -> idle after stunDuration', () => {
+        const stunFrames = cfgWithMoves.moves['punch'].hitStunFrames;
         const f = makeFighter({
             topState: TopState.Hitstun,
             subState: 'standing',
-            currentMove: 'punch', // the move that caused hitstun
+            stunDuration: stunFrames,
         });
-        const stunFrames = cfgWithMoves.moves['punch'].hitStunFrames;
         // frameInState starts at 0, update checks >= stunFrames,
         // increment happens after update, so need stunFrames+1 ticks
         for (let i = 0; i < stunFrames; i++) {
@@ -188,13 +189,13 @@ describe('FighterFSM', () => {
         expect(f.subState).toBe('idle');
     });
 
-    it('blockstun/standing -> idle after blockStunFrames', () => {
+    it('blockstun/standing -> idle after stunDuration', () => {
+        const stunFrames = cfgWithMoves.moves['punch'].blockStunFrames;
         const f = makeFighter({
             topState: TopState.Blockstun,
             subState: 'standing',
-            currentMove: 'punch',
+            stunDuration: stunFrames,
         });
-        const stunFrames = cfgWithMoves.moves['punch'].blockStunFrames;
         for (let i = 0; i < stunFrames; i++) {
             tickFSM(f, 0, cfgWithMoves);
             expect(f.topState).toBe(TopState.Blockstun);

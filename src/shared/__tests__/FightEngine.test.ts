@@ -5,7 +5,7 @@ import {
     createInitialFighterState,
 } from '../FightEngine';
 import { TopState, RoundPhase, InputBit } from '../types';
-import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP } from '../constants';
+import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES } from '../constants';
 import type { CharacterConfig } from '../types';
 
 // Minimal config for testing
@@ -17,7 +17,32 @@ const testConfig: CharacterConfig = {
     frameWidth: 64,
     frameHeight: 64,
     animations: {},
-    moves: {},
+    moves: {
+        punch: {
+            name: 'punch',
+            damage: 80,
+            startup: 3,
+            active: 3,
+            recovery: 6,
+            hitbox: { x: 20, y: -70, width: 60, height: 30 },
+            knockbackX: 5,
+            knockbackY: 0,
+            hitStunFrames: 12,
+            blockStunFrames: 8,
+        },
+        kick: {
+            name: 'kick',
+            damage: 100,
+            startup: 5,
+            active: 3,
+            recovery: 8,
+            hitbox: { x: 20, y: -50, width: 70, height: 30 },
+            knockbackX: 8,
+            knockbackY: -2,
+            hitStunFrames: 16,
+            blockStunFrames: 10,
+        },
+    },
     pushbox: { x: -22, y: -90, width: 44, height: 90 },
     hurtbox: { x: -20, y: -85, width: 40, height: 85 },
     walkSpeed: 4,
@@ -154,5 +179,103 @@ describe('FightEngine', () => {
         engine.step([InputBit.RIGHT, 0]);
         expect(engine.state.fighters[0].x).toBe(xBefore); // frozen
         expect(engine.state.hitStop).toBe(2);
+    });
+
+    describe('hit detection (T15)', () => {
+        function setupCloseRange() {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            // Place fighters close enough for punch hitbox to reach
+            f1.x = 300;
+            f2.x = 360;
+            f1.facingRight = true;
+            f2.facingRight = false;
+            return engine;
+        }
+
+        it('punch damages defender after startup frames', () => {
+            const engine = setupCloseRange();
+            const [f1, f2] = engine.state.fighters;
+
+            // Frame 0: press punch → enters attack, frameInState→1 after tickFSM
+            engine.step([InputBit.PUNCH, 0]);
+            expect(f1.subState).toBe('attack');
+            expect(f2.hp).toBe(DEFAULT_HP); // no damage yet (startup)
+
+            // frameInState=2 after tick, still < startup(3)
+            engine.step([0, 0]);
+            expect(f2.hp).toBe(DEFAULT_HP);
+
+            // frameInState=3 after tick → active frame → hit connects
+            engine.step([0, 0]);
+            expect(f2.hp).toBe(DEFAULT_HP - 80);
+        });
+
+        it('hit sets defender to hitstun', () => {
+            const engine = setupCloseRange();
+            const f2 = engine.state.fighters[1];
+
+            // Enter attack and advance to active frames
+            engine.step([InputBit.PUNCH, 0]); // frameInState→1
+            engine.step([0, 0]);              // frameInState→2
+            engine.step([0, 0]);              // frameInState→3, hit connects
+
+            expect(f2.topState).toBe(TopState.Hitstun);
+            expect(f2.subState).toBe('standing');
+            expect(f2.stunDuration).toBe(12);
+        });
+
+        it('hit applies knockback to defender', () => {
+            const engine = setupCloseRange();
+            const f2 = engine.state.fighters[1];
+            const startX = f2.x;
+
+            // Enter attack and advance to hit
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects, hitStop set
+
+            // After hit-stop expires, knockback should move defender
+            while (engine.state.hitStop > 0) {
+                engine.step([0, 0]);
+            }
+            engine.step([0, 0]); // one more frame for velocity to apply
+
+            expect(f2.x).toBeGreaterThan(startX);
+        });
+
+        it('hit triggers global hit-stop', () => {
+            const engine = setupCloseRange();
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            expect(engine.state.hitStop).toBe(HIT_STOP_FRAMES);
+        });
+
+        it('same move does not hit twice (hitConfirmed)', () => {
+            const engine = setupCloseRange();
+            const f2 = engine.state.fighters[1];
+
+            // Enter attack and advance to hit
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            const hpAfterHit = f2.hp;
+
+            // Drain hit-stop
+            while (engine.state.hitStop > 0) {
+                engine.step([0, 0]);
+            }
+
+            // Continue through remaining active frames — should not hit again
+            for (let i = 0; i < 10; i++) {
+                engine.step([0, 0]);
+            }
+
+            expect(f2.hp).toBe(hpAfterHit);
+        });
     });
 });

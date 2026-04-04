@@ -53,6 +53,7 @@ describe('Type compatibility (compile-time checks)', () => {
             hp: 1000, facingRight: true,
             topState: TopState.Grounded, subState: 'idle',
             frameInState: 0, currentMove: null,
+            hitConfirmed: false, stunDuration: 0,
             hitStopFrames: 0, roundWins: 0,
         };
         expect(state.hp).toBe(1000);
@@ -64,6 +65,7 @@ describe('Type compatibility (compile-time checks)', () => {
             hp: 1000, facingRight: true,
             topState: TopState.Grounded, subState: 'idle',
             frameInState: 0, currentMove: null,
+            hitConfirmed: false, stunDuration: 0,
             hitStopFrames: 0, roundWins: 0,
         };
         const gs: GameState = {

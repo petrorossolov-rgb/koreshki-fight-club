@@ -10,6 +10,7 @@ function makeFighter(overrides: Partial<FighterState> = {}): FighterState {
         hp: 1000, facingRight: true,
         topState: TopState.Grounded, subState: 'idle',
         frameInState: 0, currentMove: null,
+        hitConfirmed: false, stunDuration: 0,
         hitStopFrames: 0, roundWins: 0,
         ...overrides,
     };

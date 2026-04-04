@@ -97,6 +97,8 @@ export interface FighterState {
     subState: string;       // e.g. "idle", "walkForward", "attack"
     frameInState: number;
     currentMove: string | null;   // key into CharacterConfig.moves
+    hitConfirmed: boolean;        // true if currentMove already connected
+    stunDuration: number;         // frames of hitstun/blockstun remaining (set on hit)
     hitStopFrames: number;
     roundWins: number;
 }
