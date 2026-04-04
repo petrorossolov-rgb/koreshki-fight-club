@@ -5,7 +5,7 @@ import {
     createInitialFighterState,
 } from '../FightEngine';
 import { TopState, RoundPhase, InputBit } from '../types';
-import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES } from '../constants';
+import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES, ROUND_TIME, ROUNDS_TO_WIN, INTRO_FRAMES, KO_FRAMES } from '../constants';
 import type { CharacterConfig } from '../types';
 
 // Minimal config for testing
@@ -51,7 +51,11 @@ const testConfig: CharacterConfig = {
 };
 
 function makeEngine() {
-    return createFightEngine({ p1Config: testConfig, p2Config: testConfig });
+    const engine = createFightEngine({ p1Config: testConfig, p2Config: testConfig });
+    // Skip intro for existing tests — go straight to fight phase
+    engine.state.roundPhase = RoundPhase.Fight;
+    engine.state.phaseFrames = 0;
+    return engine;
 }
 
 describe('FightEngine', () => {
@@ -64,7 +68,7 @@ describe('FightEngine', () => {
         expect(state.fighters[1].x).toBe(twoThirds);
         expect(state.fighters[0].facingRight).toBe(true);
         expect(state.fighters[1].facingRight).toBe(false);
-        expect(state.roundPhase).toBe(RoundPhase.Fight);
+        expect(state.roundPhase).toBe(RoundPhase.Intro);
     });
 
     it('creates initial fighter state correctly', () => {
@@ -333,6 +337,132 @@ describe('FightEngine', () => {
             }
 
             expect(f2.hp).toBe(hpAfterHit);
+        });
+    });
+
+    describe('round management (T17)', () => {
+        it('starts in Intro phase, transitions to Fight after INTRO_FRAMES', () => {
+            const engine = createFightEngine({ p1Config: testConfig, p2Config: testConfig });
+            expect(engine.state.roundPhase).toBe(RoundPhase.Intro);
+
+            // Advance through intro
+            for (let i = 0; i < INTRO_FRAMES; i++) {
+                engine.step([0, 0]);
+            }
+            // One more step to process the transition
+            engine.step([0, 0]);
+            expect(engine.state.roundPhase).toBe(RoundPhase.Fight);
+        });
+
+        it('timer counts down during Fight phase', () => {
+            const engine = makeEngine();
+            expect(engine.state.roundTimer).toBe(ROUND_TIME);
+
+            // 60 frames = 1 second
+            for (let i = 0; i < 60; i++) {
+                engine.step([0, 0]);
+            }
+            expect(engine.state.roundTimer).toBe(ROUND_TIME - 1);
+        });
+
+        it('KO when fighter HP reaches 0', () => {
+            const engine = makeEngine();
+            const f2 = engine.state.fighters[1];
+
+            // Set HP to just above 0, then deal a fatal hit
+            f2.hp = 1;
+            const f1 = engine.state.fighters[0];
+            f1.x = 300;
+            f2.x = 360;
+
+            // P1 punches P2
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects, HP -> 0
+
+            expect(f2.hp).toBe(0);
+            expect(engine.state.roundPhase).toBe(RoundPhase.KO);
+        });
+
+        it('timeout triggers KO phase, higher HP wins', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+
+            f1.hp = 800;
+            f2.hp = 600;
+            engine.state.roundTimer = 1; // 1 second left
+
+            // Burn through the last second (60 frames)
+            for (let i = 0; i < 60; i++) {
+                engine.step([0, 0]);
+            }
+
+            expect(engine.state.roundTimer).toBe(0);
+            expect(engine.state.roundPhase).toBe(RoundPhase.KO);
+        });
+
+        it('KO phase awards win after KO_FRAMES, then transitions to RoundEnd', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+
+            // Set up P1 win scenario
+            f1.hp = 500;
+            f2.hp = 0;
+            engine.state.roundPhase = RoundPhase.KO;
+            engine.state.phaseFrames = 0;
+
+            // Advance through KO phase (KO_FRAMES steps transitions to RoundEnd)
+            for (let i = 0; i < KO_FRAMES; i++) {
+                engine.step([0, 0]);
+            }
+
+            expect(f1.roundWins).toBe(1);
+            expect(engine.state.roundPhase).toBe(RoundPhase.RoundEnd);
+        });
+
+        it('RoundEnd resets fighters and starts new round', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+
+            f1.roundWins = 1;
+            f2.roundWins = 0;
+            engine.state.currentRound = 1;
+            engine.state.roundPhase = RoundPhase.RoundEnd;
+            engine.state.phaseFrames = 0;
+
+            engine.step([0, 0]); // process RoundEnd
+
+            expect(engine.state.currentRound).toBe(2);
+            expect(engine.state.roundPhase).toBe(RoundPhase.Intro);
+            expect(engine.state.fighters[0].hp).toBe(DEFAULT_HP);
+            expect(engine.state.fighters[1].hp).toBe(DEFAULT_HP);
+            expect(engine.state.fighters[0].roundWins).toBe(1); // preserved
+            expect(engine.state.roundTimer).toBe(ROUND_TIME);
+        });
+
+        it('match ends when a player reaches ROUNDS_TO_WIN', () => {
+            const engine = makeEngine();
+            const [f1] = engine.state.fighters;
+
+            f1.roundWins = ROUNDS_TO_WIN;
+            engine.state.roundPhase = RoundPhase.RoundEnd;
+            engine.state.phaseFrames = 0;
+
+            engine.step([0, 0]);
+
+            expect(engine.state.roundPhase).toBe(RoundPhase.MatchEnd);
+        });
+
+        it('MatchEnd phase is a no-op', () => {
+            const engine = makeEngine();
+            engine.state.roundPhase = RoundPhase.MatchEnd;
+            engine.state.phaseFrames = 0;
+
+            const stateBefore = JSON.stringify(engine.state);
+            engine.step([InputBit.PUNCH, 0]);
+            // Only phaseFrames should change
+            engine.state.phaseFrames = 0;
+            expect(JSON.stringify(engine.state)).toBe(stateBefore);
         });
     });
 });

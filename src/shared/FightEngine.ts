@@ -1,6 +1,6 @@
 import { TopState, RoundPhase, InputBit } from './types';
 import type { FighterState, GameState, CharacterConfig, HitResult } from './types';
-import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES } from './constants';
+import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES, ROUND_TIME, ROUNDS_TO_WIN, INTRO_FRAMES, KO_FRAMES } from './constants';
 import { applyGravity, applyVelocity, clampToStage, resolvePushboxes } from './PhysicsSystem';
 import { tickFSM, transition } from '@game/entities/FighterFSM';
 import { checkHit } from './CollisionSystem';
@@ -48,8 +48,8 @@ export function createInitialGameState(): GameState {
             createInitialFighterState(oneThird, true),
             createInitialFighterState(twoThirds, false),
         ],
-        roundPhase: RoundPhase.Fight,
-        roundTimer: 99,
+        roundPhase: RoundPhase.Intro,
+        roundTimer: ROUND_TIME,
         currentRound: 1,
         phaseFrames: 0,
         hitStop: 0,
@@ -138,19 +138,32 @@ function processHits(
     }
 }
 
+// ── Round management ───────────────────────────────────────────────
+
+function setPhase(state: GameState, phase: RoundPhase): void {
+    state.roundPhase = phase;
+    state.phaseFrames = 0;
+}
+
+function resetFightersForRound(state: GameState): void {
+    const oneThird = Math.round(STAGE_WIDTH / 3);
+    const twoThirds = Math.round((STAGE_WIDTH * 2) / 3);
+    const wins: [number, number] = [state.fighters[0].roundWins, state.fighters[1].roundWins];
+
+    state.fighters[0] = createInitialFighterState(oneThird, true);
+    state.fighters[1] = createInitialFighterState(twoThirds, false);
+    state.fighters[0].roundWins = wins[0];
+    state.fighters[1].roundWins = wins[1];
+    state.roundTimer = ROUND_TIME;
+}
+
 // ── Engine ──────────────────────────────────────────────────────────
 
 export function createFightEngine(config: FightEngineConfig): FightEngine {
     const state = createInitialGameState();
     const configs: [CharacterConfig, CharacterConfig] = [config.p1Config, config.p2Config];
 
-    function step(inputs: [number, number]): void {
-        // Hit-stop freezes everything
-        if (state.hitStop > 0) {
-            state.hitStop--;
-            return;
-        }
-
+    function stepFight(inputs: [number, number]): void {
         const [f1, f2] = state.fighters;
         const [bits1, bits2] = inputs;
 
@@ -177,8 +190,74 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         // 6. Hit detection
         processHits(state, configs, inputs);
 
-        // 7. Advance phase frame counter
+        // 7. Timer countdown (60 frames = 1 second)
+        if (state.phaseFrames % 60 === 0) {
+            state.roundTimer--;
+        }
+
+        // 8. Check KO or timeout
+        if (f1.hp <= 0 || f2.hp <= 0) {
+            setPhase(state, RoundPhase.KO);
+            return;
+        }
+        if (state.roundTimer <= 0) {
+            setPhase(state, RoundPhase.KO);
+            return;
+        }
+    }
+
+    function step(inputs: [number, number]): void {
+        // Hit-stop freezes everything
+        if (state.hitStop > 0) {
+            state.hitStop--;
+            return;
+        }
+
         state.phaseFrames++;
+
+        switch (state.roundPhase) {
+            case RoundPhase.Intro:
+                if (state.phaseFrames >= INTRO_FRAMES) {
+                    setPhase(state, RoundPhase.Fight);
+                }
+                break;
+
+            case RoundPhase.Fight:
+                stepFight(inputs);
+                break;
+
+            case RoundPhase.KO:
+                if (state.phaseFrames >= KO_FRAMES) {
+                    // Award round win
+                    const [f1, f2] = state.fighters;
+                    if (f1.hp > f2.hp) {
+                        f1.roundWins++;
+                    } else if (f2.hp > f1.hp) {
+                        f2.roundWins++;
+                    }
+                    // else: draw — no win awarded
+
+                    setPhase(state, RoundPhase.RoundEnd);
+                }
+                break;
+
+            case RoundPhase.RoundEnd: {
+                const [f1, f2] = state.fighters;
+                if (f1.roundWins >= ROUNDS_TO_WIN || f2.roundWins >= ROUNDS_TO_WIN) {
+                    setPhase(state, RoundPhase.MatchEnd);
+                } else {
+                    // Next round
+                    state.currentRound++;
+                    resetFightersForRound(state);
+                    setPhase(state, RoundPhase.Intro);
+                }
+                break;
+            }
+
+            case RoundPhase.MatchEnd:
+                // Game over — no-op
+                break;
+        }
     }
 
     return { state, step };

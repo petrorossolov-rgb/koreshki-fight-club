@@ -14,3 +14,7 @@ export const ROUNDS_TO_WIN   = 2;
 // ── Combat ───────────────────────────────────────────────────────────
 export const HIT_STOP_FRAMES = 6;
 export const DEFAULT_HP      = 1000;
+
+// ── Round phases ────────────────────────────────────────────────
+export const INTRO_FRAMES = 60;    // 1 second at 60 FPS
+export const KO_FRAMES    = 120;   // 2 seconds at 60 FPS
