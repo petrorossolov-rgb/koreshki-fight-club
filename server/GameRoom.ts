@@ -2,7 +2,7 @@ import type { CharacterConfig, GameState } from "@shared/types.ts";
 import { FIXED_DT } from "@shared/constants.ts";
 import { createFightEngine } from "@shared/FightEngine.ts";
 import type { Room } from "./RoomManager.ts";
-import { sendMsg } from "./main.ts";
+import { sendMsg } from "./utils.ts";
 
 const STATE_BROADCAST_INTERVAL = 3; // every 3rd tick → ~20Hz
 

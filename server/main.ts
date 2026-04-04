@@ -1,4 +1,4 @@
-import type { ClientMsg, ServerMsg } from "@shared/types.ts";
+import type { ClientMsg } from "@shared/types.ts";
 import type { CharacterConfig } from "@shared/types.ts";
 import { createRoom, joinRoom, setReady, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
 import { startGameRoom } from "./GameRoom.ts";
@@ -68,12 +68,6 @@ function validateMessage(data: unknown): ClientMsg | null {
 }
 
 // ── WebSocket handling ─────────────────────────────────────────────
-
-function sendMsg(ws: WebSocket, msg: ServerMsg): void {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
-  }
-}
 
 function handleWebSocket(ws: WebSocket): void {
   console.log("[ws] client connected");
@@ -164,4 +158,4 @@ Deno.serve({ port: PORT }, (req: Request): Response => {
 
 console.log(`[server] listening on port ${PORT}`);
 
-export { sendMsg, handleWebSocket, validateMessage, isRateLimited };
+export { handleWebSocket, validateMessage, isRateLimited };

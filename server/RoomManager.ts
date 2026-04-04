@@ -1,5 +1,5 @@
 import type { ServerMsg } from "@shared/types.ts";
-import { sendMsg } from "./main.ts";
+import { sendMsg } from "./utils.ts";
 
 export interface Room {
   code: string;
