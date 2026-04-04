@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "@shared/": "../src/shared/"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}
