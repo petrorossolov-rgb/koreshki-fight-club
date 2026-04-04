@@ -1,5 +1,5 @@
-import { TopState, RoundPhase } from './types';
-import type { FighterState, GameState, CharacterConfig } from './types';
+import { TopState, RoundPhase, InputBit } from './types';
+import type { FighterState, GameState, CharacterConfig, HitResult } from './types';
 import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES } from './constants';
 import { applyGravity, applyVelocity, clampToStage, resolvePushboxes } from './PhysicsSystem';
 import { tickFSM, transition } from '@game/entities/FighterFSM';
@@ -71,25 +71,42 @@ function autoFace(f1: FighterState, f2: FighterState): void {
 
 // ── Hit processing ─────────────────────────────────────────────────
 
+/** Defender blocks if holding back while grounded and not attacking/stunned. */
+function isBlocking(defender: FighterState, defenderBits: number): boolean {
+    if (defender.topState !== TopState.Grounded) return false;
+    if (defender.subState === 'attack') return false;
+    const holdingBack = defender.facingRight
+        ? (defenderBits & InputBit.LEFT) !== 0
+        : (defenderBits & InputBit.RIGHT) !== 0;
+    return holdingBack;
+}
+
 function applyHit(
     attacker: FighterState,
+    attackerCfg: CharacterConfig,
     defender: FighterState,
-    hit: import('./types').HitResult,
     defenderCfg: CharacterConfig,
+    hit: HitResult,
     state: GameState,
+    blocked: boolean,
 ): void {
     attacker.hitConfirmed = true;
 
-    // Damage
-    defender.hp = Math.max(0, defender.hp - hit.damage);
-
-    // Hitstun — store duration on defender, transition to hitstun
-    defender.stunDuration = hit.hitStunFrames;
-    transition(defender, defenderCfg, TopState.Hitstun, 'standing');
-
-    // Knockback (after transition so it overrides enter's velX=0)
-    defender.velX = hit.knockbackX / defenderCfg.weight;
-    defender.velY = hit.knockbackY;
+    if (blocked) {
+        // Block: no damage, blockstun, reduced knockback
+        const move = attackerCfg.moves[attacker.currentMove!];
+        defender.stunDuration = move?.blockStunFrames ?? 8;
+        transition(defender, defenderCfg, TopState.Blockstun, 'standing');
+        defender.velX = (hit.knockbackX * 0.5) / defenderCfg.weight;
+        defender.velY = 0;
+    } else {
+        // Hit: full damage, hitstun, full knockback
+        defender.hp = Math.max(0, defender.hp - hit.damage);
+        defender.stunDuration = hit.hitStunFrames;
+        transition(defender, defenderCfg, TopState.Hitstun, 'standing');
+        defender.velX = hit.knockbackX / defenderCfg.weight;
+        defender.velY = hit.knockbackY;
+    }
 
     // Global hit-stop
     state.hitStop = HIT_STOP_FRAMES;
@@ -98,19 +115,26 @@ function applyHit(
 function processHits(
     state: GameState,
     configs: [CharacterConfig, CharacterConfig],
+    inputs: [number, number],
 ): void {
     const [f1, f2] = state.fighters;
 
     // Check P1 hitting P2
     if (!f1.hitConfirmed) {
         const hit = checkHit(f1, configs[0], f2, configs[1], 0, 1);
-        if (hit) applyHit(f1, f2, hit, configs[1], state);
+        if (hit) {
+            const blocked = isBlocking(f2, inputs[1]);
+            applyHit(f1, configs[0], f2, configs[1], hit, state, blocked);
+        }
     }
 
     // Check P2 hitting P1
     if (!f2.hitConfirmed) {
         const hit = checkHit(f2, configs[1], f1, configs[0], 1, 0);
-        if (hit) applyHit(f2, f1, hit, configs[0], state);
+        if (hit) {
+            const blocked = isBlocking(f1, inputs[0]);
+            applyHit(f2, configs[1], f1, configs[0], hit, state, blocked);
+        }
     }
 }
 
@@ -151,7 +175,7 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         autoFace(f1, f2);
 
         // 6. Hit detection
-        processHits(state, configs);
+        processHits(state, configs, inputs);
 
         // 7. Advance phase frame counter
         state.phaseFrames++;

@@ -254,6 +254,63 @@ describe('FightEngine', () => {
             expect(engine.state.hitStop).toBe(HIT_STOP_FRAMES);
         });
 
+        it('block prevents damage and applies blockstun', () => {
+            const engine = setupCloseRange();
+            const f2 = engine.state.fighters[1];
+
+            // P1 punches, P2 holds LEFT (back, since P2 faces left)
+            // P2 faces left → back = RIGHT
+            engine.step([InputBit.PUNCH, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]); // hit connects, P2 blocking
+
+            expect(f2.hp).toBe(DEFAULT_HP); // no damage
+            expect(f2.topState).toBe(TopState.Blockstun);
+            expect(f2.subState).toBe('standing');
+        });
+
+        it('block applies reduced knockback', () => {
+            const engine = setupCloseRange();
+            const f2 = engine.state.fighters[1];
+
+            // Unblocked hit
+            const engineUnblocked = setupCloseRange();
+            engineUnblocked.step([InputBit.PUNCH, 0]);
+            engineUnblocked.step([0, 0]);
+            engineUnblocked.step([0, 0]); // hit
+
+            // Blocked hit
+            engine.step([InputBit.PUNCH, InputBit.RIGHT]); // P2 faces left, RIGHT = back
+            engine.step([0, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]); // blocked
+
+            // Blocked knockback should be less than unblocked
+            const unblockedVelX = Math.abs(engineUnblocked.state.fighters[1].velX);
+            const blockedVelX = Math.abs(f2.velX);
+            expect(blockedVelX).toBeLessThan(unblockedVelX);
+            expect(blockedVelX).toBeCloseTo(unblockedVelX * 0.5, 5);
+        });
+
+        it('blocking while attacking does not block', () => {
+            const engine = setupCloseRange();
+            const f2 = engine.state.fighters[1];
+
+            // P2 attacks, then P1 punches while P2 is mid-attack
+            // Put P2 in attack state directly
+            f2.topState = TopState.Grounded;
+            f2.subState = 'attack';
+            f2.currentMove = 'punch';
+            f2.frameInState = 0;
+
+            // P1 punches P2 who is attacking (holding back shouldn't help)
+            engine.step([InputBit.PUNCH, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]); // hit connects
+
+            expect(f2.hp).toBeLessThan(DEFAULT_HP); // damage applied
+            expect(f2.topState).toBe(TopState.Hitstun);
+        });
+
         it('same move does not hit twice (hitConfirmed)', () => {
             const engine = setupCloseRange();
             const f2 = engine.state.fighters[1];
