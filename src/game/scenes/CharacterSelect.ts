@@ -76,13 +76,15 @@ export class CharacterSelect extends Scene {
     private statBars: GameObjects.Rectangle[] = [];
     private statLabels: GameObjects.Text[] = [];
 
-    // Local flow state
+    // Flow state
     private headerText!: GameObjects.Text;
     private currentPlayer: 0 | 1 = 0;
     private lockedChoices: [ManifestEntry | null, ManifestEntry | null] = [null, null];
-    private lockOverlay: GameObjects.Rectangle | null = null;
     private confirmBtn!: GameObjects.Rectangle;
     private confirmText!: GameObjects.Text;
+
+    // Online flow state
+    private waitingForOpponent = false;
 
     constructor() {
         super('CharacterSelect');
@@ -98,7 +100,7 @@ export class CharacterSelect extends Scene {
         this.previewSprite = null;
         this.currentPlayer = 0;
         this.lockedChoices = [null, null];
-        this.lockOverlay = null;
+        this.waitingForOpponent = false;
     }
 
     create(): void {
@@ -117,16 +119,20 @@ export class CharacterSelect extends Scene {
         this.createDetailPanel();
         this.createConfirmButton();
 
-        // Listen for selection changes to update detail panel
-        this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
-            this.updateDetailPanel(entry);
-        });
-
-        // Start local flow
+        // Start flow
         if (this.data_.mode === 'local') {
+            // Local mode: characterSelected listener set per player turn in setPlayerTurn
             this.setPlayerTurn(0);
         } else {
+            // Online mode: single selection
             this.headerText.setText('ВЫБЕРИ БОЙЦА');
+            this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
+                this.updateDetailPanel(entry);
+                if (!this.waitingForOpponent) {
+                    this.showConfirmButton(true);
+                }
+            });
+            this.setupOnlineCallbacks();
         }
     }
 
@@ -375,13 +381,122 @@ export class CharacterSelect extends Scene {
                 // Both selected — load configs and start fight
                 this.loadConfigsAndStart();
             }
+        } else {
+            // Online mode — send selection to server
+            this.onOnlineConfirm(entry);
         }
     }
 
-    private showP1Lock(entry: ManifestEntry): void {
+    // ── Online Flow ───────────────────────────────────────────────
+
+    private setupOnlineCallbacks(): void {
+        const net = this.data_.networkClient;
+        if (!net) return;
+
+        net.callbacks.onOpponentSelected = () => {
+            this.showOpponentCheckmark();
+        };
+
+        net.callbacks.onFightStart = (playerIndex: 0 | 1, p1CharId: string, p2CharId: string) => {
+            this.onlineFightStart(playerIndex, p1CharId, p2CharId);
+        };
+
+        net.callbacks.onOpponentDisconnected = () => {
+            this.cleanupOnlineCallbacks();
+            this.scene.start('MainMenu');
+        };
+    }
+
+    private cleanupOnlineCallbacks(): void {
+        const net = this.data_.networkClient;
+        if (!net) return;
+        net.callbacks.onOpponentSelected = undefined;
+        net.callbacks.onFightStart = undefined;
+        net.callbacks.onOpponentDisconnected = undefined;
+    }
+
+    private onOnlineConfirm(entry: ManifestEntry): void {
+        const net = this.data_.networkClient;
+        if (!net || this.waitingForOpponent) return;
+
+        this.waitingForOpponent = true;
+        net.selectCharacter(entry.id);
+
+        // Disable grid interaction
+        this.cells.forEach(cell => {
+            cell.each((child: GameObjects.GameObject) => {
+                if (child instanceof GameObjects.Rectangle) {
+                    child.disableInteractive();
+                }
+            });
+        });
+
+        // Show waiting state
+        this.showConfirmButton(false);
+        this.headerText.setText('Ожидание соперника...');
+        this.headerText.setColor('#ffcc00');
+
+        this.add.text(512, 540, 'Ваш выбор подтверждён', {
+            fontFamily: 'Arial', fontSize: '18px', color: '#66ff66',
+        }).setOrigin(0.5);
+    }
+
+    private showOpponentCheckmark(): void {
+        this.add.text(512, 560, '✓ Соперник выбрал бойца', {
+            fontFamily: 'Arial', fontSize: '16px', color: '#66ff66',
+        }).setOrigin(0.5);
+    }
+
+    private onlineFightStart(playerIndex: 0 | 1, p1CharId: string, p2CharId: string): void {
+        this.cleanupOnlineCallbacks();
+
+        // Collect unique files to load
+        const toLoad: { id: string; file: string }[] = [];
+        for (const charId of [p1CharId, p2CharId]) {
+            if (!this.cache.json.has(charId)) {
+                const entry = this.entries.find(e => e.id === charId);
+                if (entry) {
+                    toLoad.push({ id: entry.id, file: entry.file });
+                }
+            }
+        }
+
+        if (toLoad.length === 0) {
+            this.transitionToFight(playerIndex, p1CharId, p2CharId);
+            return;
+        }
+
+        this.headerText.setText('ЗАГРУЗКА...');
+        this.headerText.setColor('#ffffff');
+
+        for (const item of toLoad) {
+            this.load.json(item.id, item.file);
+        }
+        this.load.once('complete', () => {
+            this.transitionToFight(playerIndex, p1CharId, p2CharId);
+        });
+        this.load.start();
+    }
+
+    private transitionToFight(playerIndex: 0 | 1, p1CharId: string, p2CharId: string): void {
+        const p1Config = this.cache.json.get(p1CharId) as CharacterConfig;
+        const p2Config = this.cache.json.get(p2CharId) as CharacterConfig;
+
+        this.scene.start('FightScene', {
+            mode: 'online',
+            networkClient: this.data_.networkClient,
+            playerIndex,
+            p1Config,
+            p2Config,
+        });
+    }
+
+    // ── Local Flow Helpers ────────────────────────────────────────
+
+    private showP1Lock(_entry: ManifestEntry): void {
         // Dim overlay on the locked cell
         const cell = this.cells[this.selectedIndex];
-        this.lockOverlay = this.add.rectangle(cell.x, cell.y, CELL_W, CELL_H, 0x4488ff, 0.3);
+        this.add.rectangle(cell.x, cell.y, CELL_W, CELL_H, 0x4488ff, 0.3);
         const lockText = this.add.text(cell.x, cell.y - 20, 'P1', {
             fontFamily: 'Arial Black', fontSize: '16px', color: '#4488ff',
             stroke: '#000000', strokeThickness: 3,
