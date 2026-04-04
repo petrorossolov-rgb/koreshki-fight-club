@@ -86,6 +86,9 @@ export class CharacterSelect extends Scene {
     // Online flow state
     private waitingForOpponent = false;
 
+    // Random cycling state
+    private isRandomCycling = false;
+
     constructor() {
         super('CharacterSelect');
     }
@@ -101,6 +104,7 @@ export class CharacterSelect extends Scene {
         this.currentPlayer = 0;
         this.lockedChoices = [null, null];
         this.waitingForOpponent = false;
+        this.isRandomCycling = false;
     }
 
     create(): void {
@@ -549,12 +553,19 @@ export class CharacterSelect extends Scene {
     // ── Selection ─────────────────────────────────────────────────
 
     selectCell(index: number): void {
-        // Random cell → pick random character
+        if (this.isRandomCycling) return;
+
+        // Random cell → cycling animation then random pick
         if (index === this.entries.length) {
-            index = Phaser.Math.Between(0, this.entries.length - 1);
+            this.startRandomCycle();
+            return;
         }
 
         if (index < 0 || index >= this.entries.length) return;
+        this.applySelection(index);
+    }
+
+    private applySelection(index: number): void {
         this.selectedIndex = index;
 
         // Update highlight
@@ -565,8 +576,44 @@ export class CharacterSelect extends Scene {
             cell.x, cell.y, CELL_W + 6, CELL_H + 6
         ).setStrokeStyle(3, 0x44aaff).setFillStyle(0x000000, 0);
 
-        // Emit event for detail panel (T10) and confirm button (T11)
+        // Emit event for detail panel and confirm button
         this.events.emit('characterSelected', index, this.entries[index]);
+    }
+
+    private startRandomCycle(): void {
+        this.isRandomCycling = true;
+        this.showConfirmButton(false);
+
+        const totalSteps = Phaser.Math.Between(12, 18); // 1.2–1.8s at 100ms
+        let step = 0;
+        let current = Phaser.Math.Between(0, this.entries.length - 1);
+
+        const cycleOnce = () => {
+            // Pick next index (avoid repeating same cell)
+            let next = Phaser.Math.Between(0, this.entries.length - 1);
+            while (next === current && this.entries.length > 1) {
+                next = Phaser.Math.Between(0, this.entries.length - 1);
+            }
+            current = next;
+
+            // Visual highlight without emitting event (fast cycling)
+            if (this.highlightBorder) this.highlightBorder.destroy();
+            const cell = this.cells[current];
+            this.highlightBorder = this.add.rectangle(
+                cell.x, cell.y, CELL_W + 6, CELL_H + 6
+            ).setStrokeStyle(3, 0xffcc00).setFillStyle(0x000000, 0);
+
+            step++;
+            if (step < totalSteps) {
+                this.time.delayedCall(100, cycleOnce);
+            } else {
+                // Final selection
+                this.isRandomCycling = false;
+                this.applySelection(current);
+            }
+        };
+
+        cycleOnce();
     }
 
     getSelectedEntry(): ManifestEntry | null {
