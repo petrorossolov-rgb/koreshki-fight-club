@@ -31,6 +31,40 @@ vite/           — Vite build configs
 - **Sprites:** LuizMelo packs (CC0) with scale/palette/accessories customization
 - **Touch controls:** nipplejs + custom buttons
 
+## Architecture
+
+```
+src/shared/          — pure logic (types, constants, physics, engine), zero platform imports
+src/game/            — Phaser client (scenes, entities, UI, input, networking)
+src/game/scenes/     — Phaser scenes (Boot, Preloader, MainMenu, FightScene, GameOver)
+src/game/entities/   — visual wrappers + FSM (Fighter, FighterFSM)
+src/game/systems/    — input, camera, etc.
+src/game/ui/         — HUD elements (HealthBar, RoundDisplay, TouchControls)
+src/game/net/        — NetworkClient (WebSocket wrapper)
+server/              — Deno authoritative server (RoomManager, GameRoom)
+public/data/         — JSON character configs
+public/assets/       — sprites, sounds, images
+```
+
+### Key Conventions
+
+- **FightEngine** (`src/shared/FightEngine.ts`) — deterministic step function, runs on both client and server
+- **FSM** — flat `Record<string, StateHandler>` map, not class hierarchy. States keyed as `"topState/subState"`
+- **JSON configs** — character data in `public/data/characters/*.json`, validated against `CharacterConfig` interface
+- **Fixed timestep** — all game logic at 60 FPS via accumulator pattern: `while (accum >= FIXED_DT) { step(); accum -= FIXED_DT; }`
+- **Input bits** — `InputBit` const enum with bitflags, packed into a single number per frame
+- **Shared code** — `src/shared/` must have zero Phaser/Deno/DOM imports (pure TypeScript only)
+
+## Commands
+
+```bash
+npm run dev          # Vite dev server (hot reload)
+npm run build        # production build
+npm test             # vitest run (single pass)
+npm run test:watch   # vitest in watch mode
+deno run --allow-net server/main.ts   # start game server
+```
+
 ## Phases
 
 1. **Core + Online** — 1 fighter, basic combat, touch controls, WebSocket online
