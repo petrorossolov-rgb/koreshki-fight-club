@@ -9,7 +9,10 @@
 - **Physics are pure functions**: no classes, no side effects beyond mutating the passed FighterState
 - **Fighter sprite origin**: `(0.5, 1)` — bottom-center for floor alignment at FLOOR_Y
 - **Animation key prefix**: `{configId}_p{playerIndex}_` avoids collisions when two fighters share a spritesheet
-- **Engine step order**: FSM tick → gravity → velocity → clampToStage → pushbox → autoFace
+- **Engine step order**: phaseFrames++ → (phase switch) → FSM tick → gravity → velocity → clampToStage → pushbox → autoFace → processHits → timer
+- **Hit detection timing**: frameInState is incremented by tickFSM BEFORE processHits runs — active frames start at frameInState=startup (1-indexed after tickFSM)
+- **Blocking**: defender must hold back + be grounded + not attacking. Blocked = no damage, blockstun, knockback×0.5
+- **Round phases**: Intro(60f) → Fight → KO(120f) → RoundEnd(transient) → MatchEnd. Tests skip Intro by setting roundPhase=Fight
 - **Resolve aliases (3 places)**: `tsconfig.json` (paths), `vitest.config.ts` (resolve.alias), `vite/config.*.mjs` (resolve.alias) — all must stay in sync
 
 ## Docs Debt
@@ -101,3 +104,21 @@
 - **Files changed**: `src/shared/CollisionSystem.ts` (new), `src/shared/__tests__/CollisionSystem.test.ts` (new)
 - **Learnings**: Hitbox flipping: when facing left, x offset is negated AND the box position shifts by -width to keep it on the correct side.
 - **Patterns**: `toWorldAABB()` converts local offset to world coords with flip support. `checkHit()` only returns HitResult during active frames (startup < frameInState < startup+active).
+
+## [2026-04-04] — [T15] Integrate CollisionSystem into FightEngine + hit reactions
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/types.ts`, `src/game/entities/FighterFSM.ts`, `src/shared/__tests__/FightEngine.test.ts`, + test helper updates in 3 other test files
+- **Learnings**: frameInState is incremented by tickFSM BEFORE processHits runs, so active frame detection starts one step earlier than naively expected. hitstun.enter() zeros velX — knockback must be set AFTER transition.
+- **Patterns**: `hitConfirmed` flag prevents multi-hit from same move. `stunDuration` stored directly on FighterState (not looked up from move config) for clean decoupling between attacker's move and defender's stun.
+
+## [2026-04-04] — [T16] Add blocking logic
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/__tests__/FightEngine.test.ts`
+- **Learnings**: Block detection needs defender's input bits — processHits must receive inputs. Blocking only works when grounded and not attacking.
+- **Patterns**: `isBlocking()` checks holdingBack + grounded + not attacking. Blocked hits: damage=0, blockstun from attacker's move config, knockback×0.5.
+
+## [2026-04-04] — [T17] Add round management to FightEngine
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/constants.ts`, `src/shared/__tests__/FightEngine.test.ts`
+- **Learnings**: phaseFrames must increment BEFORE phase switch (1-indexed) to avoid off-by-one in timer/phase transition checks. RoundEnd is a transient phase — processed immediately in one step.
+- **Patterns**: `setPhase()` resets phaseFrames to 0 on transition. `resetFightersForRound()` preserves roundWins. Round phases: Intro(60f)→Fight→KO(120f)→RoundEnd→MatchEnd.
