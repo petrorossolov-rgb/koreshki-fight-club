@@ -13,6 +13,8 @@ export interface FightSceneData {
     mode: 'local' | 'online';
     networkClient?: NetworkClient;
     playerIndex?: 0 | 1;
+    p1Config?: CharacterConfig;
+    p2Config?: CharacterConfig;
 }
 
 export class FightScene extends Scene {
@@ -22,6 +24,10 @@ export class FightScene extends Scene {
     private healthBars!: [HealthBar, HealthBar];
     private roundDisplay!: RoundDisplay;
     private accumulator = 0;
+
+    // Config state
+    private p1Config!: CharacterConfig;
+    private p2Config!: CharacterConfig;
 
     // Online mode state
     private mode: 'local' | 'online' = 'local';
@@ -38,23 +44,21 @@ export class FightScene extends Scene {
         this.networkClient = data?.networkClient ?? null;
         this.localPlayerIndex = data?.playerIndex ?? 0;
         this.remoteState = null;
-    }
 
-    preload(): void {
-        const config = this.cache.json.get('char_default') as CharacterConfig;
-        Fighter.loadAssets(this, config);
+        // Use provided configs or fallback to cached default
+        const fallback = () => this.cache.json.get('char_default') as CharacterConfig;
+        this.p1Config = data?.p1Config ?? fallback();
+        this.p2Config = data?.p2Config ?? fallback();
     }
 
     create(): void {
         this.cameras.main.setBackgroundColor(0x1a1a2e);
 
-        const config = this.cache.json.get('char_default') as CharacterConfig;
-
-        this.engine = createFightEngine({ p1Config: config, p2Config: config });
+        this.engine = createFightEngine({ p1Config: this.p1Config, p2Config: this.p2Config });
 
         this.fighters = [
-            new Fighter(this, config, 0),
-            new Fighter(this, config, 1),
+            new Fighter(this, this.p1Config, 0),
+            new Fighter(this, this.p2Config, 1),
         ];
 
         // Sync initial positions
@@ -71,8 +75,8 @@ export class FightScene extends Scene {
         }
 
         this.healthBars = [
-            new HealthBar(this, 0),
-            new HealthBar(this, 1),
+            new HealthBar(this, 0, this.p1Config.maxHp),
+            new HealthBar(this, 1, this.p2Config.maxHp),
         ];
         this.roundDisplay = new RoundDisplay(this);
 

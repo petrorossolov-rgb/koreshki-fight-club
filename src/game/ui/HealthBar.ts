@@ -13,10 +13,10 @@ export class HealthBar {
     private readonly maxHp: number;
     private readonly playerIndex: number;
 
-    constructor(scene: Scene, playerIndex: number) {
+    constructor(scene: Scene, playerIndex: number, maxHp: number = DEFAULT_HP) {
         this.playerIndex = playerIndex;
-        this.maxHp = DEFAULT_HP;
-        this.displayHp = DEFAULT_HP;
+        this.maxHp = maxHp;
+        this.displayHp = maxHp;
 
         // P1 bar starts from left, P2 bar starts from right
         const x = playerIndex === 0
