@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import type { CharacterConfig, FighterState } from '@shared/types';
 
+const SHARED_TEXTURE = 'martial-hero';
+
 /** Map FSM state keys to animation config keys. */
 const STATE_TO_ANIM: Record<string, string> = {
     'grounded/idle': 'idle',
@@ -23,13 +25,16 @@ export class Fighter {
 
         this.createAnimations(scene);
 
-        this.sprite = scene.add.sprite(0, 0, config.id);
+        this.sprite = scene.add.sprite(0, 0, SHARED_TEXTURE);
         this.sprite.setOrigin(0.5, 1); // bottom-center origin for floor alignment
+        this.sprite.setScale(config.scale);
+        if (config.tint !== 0xFFFFFF) this.sprite.setTint(config.tint);
     }
 
-    /** Preload spritesheet in a Preloader scene. */
+    /** Preload shared spritesheet (skip if already loaded). */
     static loadAssets(scene: Phaser.Scene, config: CharacterConfig): void {
-        scene.load.spritesheet(config.id, config.spriteSheet, {
+        if (scene.textures.exists(SHARED_TEXTURE)) return;
+        scene.load.spritesheet(SHARED_TEXTURE, config.spriteSheet, {
             frameWidth: config.frameWidth,
             frameHeight: config.frameHeight,
         });
@@ -61,7 +66,7 @@ export class Fighter {
             if (scene.anims.exists(key)) continue;
             scene.anims.create({
                 key,
-                frames: scene.anims.generateFrameNumbers(this.config.id, {
+                frames: scene.anims.generateFrameNumbers(SHARED_TEXTURE, {
                     start: def.frameStart,
                     end: def.frameEnd,
                 }),
