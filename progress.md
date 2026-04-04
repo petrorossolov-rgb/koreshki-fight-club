@@ -210,3 +210,20 @@
 - **Files changed**: `src/game/scenes/MainMenu.ts`
 - **Learnings**: View-based UI (main/online/create/join/waiting) with clearUI() works well for Phaser menu screens. `import.meta.env.VITE_WS_URL` works out of the box with vite/client types.
 - **Patterns**: `connectAndDo()` pattern: connect first, then run action on 'connected' state. NetworkClient ownership transfers from MainMenu to FightScene (MainMenu nulls its ref).
+
+## [2026-04-04] — [T30] GitHub Actions: deploy client to Pages
+- **Status**: ✅ Done
+- **Files changed**: `.github/workflows/deploy.yml` (new)
+- **Learnings**: GitHub Pages with Actions requires `permissions: pages: write, id-token: write`. `upload-pages-artifact` + `deploy-pages` v4 is the current recommended pattern.
+- **Patterns**: `VITE_WS_URL` passed via `vars.*` (repository variables, not secrets — it's a public URL).
+
+## [2026-04-04] — [T31] Deno Deploy config + env docs
+- **Status**: ✅ Done
+- **Files changed**: `server/main.ts`, `.env.example` (new), `docs/deploy.md` (new)
+- **Learnings**: CORS headers needed on all HTTP responses including health check. OPTIONS preflight handler required for browser CORS.
+- **Patterns**: CORS_ORIGIN from env with `*` default for dev. Deploy docs cover both `deployctl` CLI and GitHub integration methods.
+
+## [2026-04-04] — [T32] End-to-end test on phones
+- **Status**: ✅ Done
+- **Files changed**: `docs/testing-checklist.md` (new)
+- **Learnings**: Checklist covers local mode, online mode, cross-device matrix, and performance — actual testing requires deploy.
