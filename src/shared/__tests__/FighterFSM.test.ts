@@ -29,6 +29,7 @@ const cfg: CharacterConfig = {
     walkSpeed: 4,
     jumpVelY: -12,
     weight: 1,
+    description: 'Test', nickname: 'Tester', scale: 1, tint: 0xFFFFFF, portraitFrame: 0, maxHp: 1000,
 };
 
 const cfgWithMoves: CharacterConfig = {

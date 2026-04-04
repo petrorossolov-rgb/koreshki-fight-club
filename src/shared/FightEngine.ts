@@ -20,13 +20,14 @@ export interface FightEngine {
 export function createInitialFighterState(
     x: number,
     facingRight: boolean,
+    maxHp: number = DEFAULT_HP,
 ): FighterState {
     return {
         x,
         y: FLOOR_Y,
         velX: 0,
         velY: 0,
-        hp: DEFAULT_HP,
+        hp: maxHp,
         facingRight,
         topState: TopState.Grounded,
         subState: 'idle',
@@ -39,14 +40,16 @@ export function createInitialFighterState(
     };
 }
 
-export function createInitialGameState(): GameState {
+export function createInitialGameState(
+    configs?: [CharacterConfig, CharacterConfig],
+): GameState {
     const oneThird = Math.round(STAGE_WIDTH / 3);
     const twoThirds = Math.round((STAGE_WIDTH * 2) / 3);
 
     return {
         fighters: [
-            createInitialFighterState(oneThird, true),
-            createInitialFighterState(twoThirds, false),
+            createInitialFighterState(oneThird, true, configs?.[0].maxHp ?? DEFAULT_HP),
+            createInitialFighterState(twoThirds, false, configs?.[1].maxHp ?? DEFAULT_HP),
         ],
         roundPhase: RoundPhase.Intro,
         roundTimer: ROUND_TIME,
@@ -145,13 +148,16 @@ function setPhase(state: GameState, phase: RoundPhase): void {
     state.phaseFrames = 0;
 }
 
-function resetFightersForRound(state: GameState): void {
+function resetFightersForRound(
+    state: GameState,
+    configs?: [CharacterConfig, CharacterConfig],
+): void {
     const oneThird = Math.round(STAGE_WIDTH / 3);
     const twoThirds = Math.round((STAGE_WIDTH * 2) / 3);
     const wins: [number, number] = [state.fighters[0].roundWins, state.fighters[1].roundWins];
 
-    state.fighters[0] = createInitialFighterState(oneThird, true);
-    state.fighters[1] = createInitialFighterState(twoThirds, false);
+    state.fighters[0] = createInitialFighterState(oneThird, true, configs?.[0].maxHp ?? DEFAULT_HP);
+    state.fighters[1] = createInitialFighterState(twoThirds, false, configs?.[1].maxHp ?? DEFAULT_HP);
     state.fighters[0].roundWins = wins[0];
     state.fighters[1].roundWins = wins[1];
     state.roundTimer = ROUND_TIME;
@@ -160,8 +166,8 @@ function resetFightersForRound(state: GameState): void {
 // ── Engine ──────────────────────────────────────────────────────────
 
 export function createFightEngine(config: FightEngineConfig): FightEngine {
-    const state = createInitialGameState();
     const configs: [CharacterConfig, CharacterConfig] = [config.p1Config, config.p2Config];
+    const state = createInitialGameState(configs);
 
     function stepFight(inputs: [number, number]): void {
         const [f1, f2] = state.fighters;
@@ -248,7 +254,7 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
                 } else {
                     // Next round
                     state.currentRound++;
-                    resetFightersForRound(state);
+                    resetFightersForRound(state, configs);
                     setPhase(state, RoundPhase.Intro);
                 }
                 break;

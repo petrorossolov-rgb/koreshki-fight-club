@@ -31,6 +31,7 @@ const cfg: CharacterConfig = {
     pushbox: { x: -30, y: -80, width: 60, height: 80 },
     hurtbox: { x: -20, y: -85, width: 40, height: 85 },
     walkSpeed: 4, jumpVelY: -12, weight: 1,
+    description: 'Test', nickname: 'Tester', scale: 1, tint: 0xFFFFFF, portraitFrame: 0, maxHp: 1000,
 };
 
 describe('CollisionSystem', () => {

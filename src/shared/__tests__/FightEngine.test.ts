@@ -48,6 +48,12 @@ const testConfig: CharacterConfig = {
     walkSpeed: 4,
     jumpVelY: -12,
     weight: 1.0,
+    description: 'Test fighter',
+    nickname: 'Tester',
+    scale: 1.0,
+    tint: 0xFFFFFF,
+    portraitFrame: 0,
+    maxHp: DEFAULT_HP,
 };
 
 function makeEngine() {
@@ -337,6 +343,47 @@ describe('FightEngine', () => {
             }
 
             expect(f2.hp).toBe(hpAfterHit);
+        });
+    });
+
+    describe('per-character maxHp (T02)', () => {
+        const lowHpConfig: CharacterConfig = { ...testConfig, id: 'low', maxHp: 800 };
+        const highHpConfig: CharacterConfig = { ...testConfig, id: 'high', maxHp: 1200 };
+
+        it('initializes fighters with per-config maxHp', () => {
+            const engine = createFightEngine({ p1Config: lowHpConfig, p2Config: highHpConfig });
+            expect(engine.state.fighters[0].hp).toBe(800);
+            expect(engine.state.fighters[1].hp).toBe(1200);
+        });
+
+        it('round reset preserves per-character maxHp', () => {
+            const engine = createFightEngine({ p1Config: lowHpConfig, p2Config: highHpConfig });
+            // Skip to fight, damage P2, trigger KO → RoundEnd → new round
+            engine.state.roundPhase = RoundPhase.Fight;
+            engine.state.fighters[1].hp = 0;
+            // Manually go through KO → RoundEnd → Intro
+            engine.state.roundPhase = RoundPhase.RoundEnd;
+            engine.state.fighters[0].roundWins = 1;
+            engine.state.phaseFrames = 0;
+            engine.step([0, 0]); // processes RoundEnd → resets fighters → Intro
+
+            expect(engine.state.fighters[0].hp).toBe(800);
+            expect(engine.state.fighters[1].hp).toBe(1200);
+            expect(engine.state.roundPhase).toBe(RoundPhase.Intro);
+        });
+
+        it('asymmetric HP match — low HP fighter KOs sooner', () => {
+            const engine = createFightEngine({ p1Config: lowHpConfig, p2Config: highHpConfig });
+            engine.state.roundPhase = RoundPhase.Fight;
+            // P1 has 800 HP, P2 has 1200 HP — same damage takes more off P1
+            const [f1, f2] = engine.state.fighters;
+            f1.hp = 800;
+            f2.hp = 1200;
+            // Deal 800 damage to both
+            f1.hp -= 800;
+            f2.hp -= 800;
+            expect(f1.hp).toBe(0);
+            expect(f2.hp).toBe(400); // still alive
         });
     });
 
