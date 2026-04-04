@@ -4,6 +4,7 @@ export interface Room {
   code: string;
   players: [WebSocket | null, WebSocket | null];
   ready: [boolean, boolean];
+  selectedChars: [string | null, string | null];
   started: boolean;
   onDestroy?: () => void;
   onInput?: (playerIndex: 0 | 1, bits: number) => void;
@@ -38,6 +39,7 @@ export function createRoom(ws: WebSocket): Room {
     code,
     players: [ws, null],
     ready: [false, false],
+    selectedChars: [null, null],
     started: false,
   };
   rooms.set(code, room);
@@ -73,6 +75,38 @@ export function joinRoom(ws: WebSocket, code: string): Room | null {
   }
 
   return room;
+}
+
+export function selectCharacter(ws: WebSocket, characterId: string, isValidId: (id: string) => boolean): void {
+  const entry = playerToRoom.get(ws);
+  if (!entry) return;
+  const { room, index } = entry;
+
+  if (!isValidId(characterId)) {
+    sendMsg(ws, { type: "error", message: `Unknown character: ${characterId}` });
+    return;
+  }
+
+  room.selectedChars[index] = characterId;
+  console.log(`[room] ${room.code}: player ${index + 1} selected ${characterId}`);
+
+  // Notify opponent
+  const opponentIndex = index === 0 ? 1 : 0;
+  const opponent = room.players[opponentIndex];
+  if (opponent) {
+    sendMsg(opponent, { type: "opponent_selected" });
+  }
+
+  // Both selected → start fight
+  if (room.selectedChars[0] && room.selectedChars[1] && !room.started) {
+    room.started = true;
+    const p1CharId = room.selectedChars[0];
+    const p2CharId = room.selectedChars[1];
+    console.log(`[room] ${room.code}: fight starting (${p1CharId} vs ${p2CharId})`);
+    if (room.players[0]) sendMsg(room.players[0], { type: "fight_start", playerIndex: 0, p1CharId, p2CharId });
+    if (room.players[1]) sendMsg(room.players[1], { type: "fight_start", playerIndex: 1, p1CharId, p2CharId });
+    room.onFightStart?.(room);
+  }
 }
 
 export function setReady(ws: WebSocket): void {

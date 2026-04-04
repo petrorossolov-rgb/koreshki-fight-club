@@ -84,6 +84,7 @@ function createMockRoom(): Room {
     code: "TEST",
     players: [createMockWS(), createMockWS()],
     ready: [true, true],
+    selectedChars: [null, null],
     started: true,
   };
 }

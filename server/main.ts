@@ -1,7 +1,7 @@
 import type { ClientMsg } from "@shared/types.ts";
-import { createRoom, joinRoom, setReady, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
+import { createRoom, joinRoom, setReady, selectCharacter, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
 import { startGameRoom } from "./GameRoom.ts";
-import { loadAllConfigs, getDefaultConfig } from "./charConfigs.ts";
+import { loadAllConfigs, getDefaultConfig, getCharConfig } from "./charConfigs.ts";
 
 // ── Load all character configs from manifest ──────────────────────
 try {
@@ -109,6 +109,9 @@ function handleWebSocket(ws: WebSocket): void {
         }
         break;
       }
+      case "select_character":
+        selectCharacter(ws, msg.characterId, (id) => getCharConfig(id) !== undefined);
+        break;
       case "ready":
         setReady(ws);
         break;

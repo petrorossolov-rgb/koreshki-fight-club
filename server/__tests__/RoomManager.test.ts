@@ -3,6 +3,7 @@ import {
   createRoom,
   joinRoom,
   setReady,
+  selectCharacter,
   handleDisconnect,
   getPlayerRoom,
   getRoom,
@@ -174,4 +175,83 @@ Deno.test("destroyRoom cleans up maps", () => {
   assertEquals(getRoom(code), undefined);
   assertEquals(getRoomCount(), countBefore - 1);
   assertEquals(getPlayerRoom(ws), undefined);
+});
+
+// ── selectCharacter tests ─────────────────────────────────────────
+
+const validIds = new Set(["petyaj", "denis", "ali"]);
+const isValidId = (id: string) => validIds.has(id);
+
+Deno.test("selectCharacter with invalid ID sends error", () => {
+  const ws1 = createMockWS();
+  const ws2 = createMockWS();
+  const room = createRoom(ws1);
+  joinRoom(ws2, room.code);
+
+  selectCharacter(ws1, "nonexistent", isValidId);
+  assertEquals(lastMsg(ws1).type, "error");
+  assertEquals(room.selectedChars[0], null);
+
+  destroyRoom(room);
+});
+
+Deno.test("selectCharacter with valid ID stores selection and notifies opponent", () => {
+  const ws1 = createMockWS();
+  const ws2 = createMockWS();
+  const room = createRoom(ws1);
+  joinRoom(ws2, room.code);
+
+  selectCharacter(ws1, "petyaj", isValidId);
+  assertEquals(room.selectedChars[0], "petyaj");
+  assertEquals(lastMsg(ws2).type, "opponent_selected");
+  assertEquals(room.started, false);
+
+  destroyRoom(room);
+});
+
+Deno.test("selectCharacter both select triggers fight_start with char IDs", () => {
+  const ws1 = createMockWS();
+  const ws2 = createMockWS();
+  const room = createRoom(ws1);
+  joinRoom(ws2, room.code);
+
+  let fightStarted = false;
+  room.onFightStart = () => { fightStarted = true; };
+
+  selectCharacter(ws1, "petyaj", isValidId);
+  selectCharacter(ws2, "ali", isValidId);
+
+  assertEquals(room.started, true);
+  assertEquals(fightStarted, true);
+
+  const p1Msgs = ws1.sentMessages.map((m) => JSON.parse(m));
+  const p2Msgs = ws2.sentMessages.map((m) => JSON.parse(m));
+  const p1Start = p1Msgs.find((m: Record<string, unknown>) => m.type === "fight_start");
+  const p2Start = p2Msgs.find((m: Record<string, unknown>) => m.type === "fight_start");
+  assertEquals(p1Start?.playerIndex, 0);
+  assertEquals(p1Start?.p1CharId, "petyaj");
+  assertEquals(p1Start?.p2CharId, "ali");
+  assertEquals(p2Start?.playerIndex, 1);
+  assertEquals(p2Start?.p1CharId, "petyaj");
+  assertEquals(p2Start?.p2CharId, "ali");
+
+  destroyRoom(room);
+});
+
+Deno.test("setReady backward compat still triggers fight_start", () => {
+  const ws1 = createMockWS();
+  const ws2 = createMockWS();
+  const room = createRoom(ws1);
+  joinRoom(ws2, room.code);
+
+  let fightStarted = false;
+  room.onFightStart = () => { fightStarted = true; };
+
+  setReady(ws1);
+  setReady(ws2);
+
+  assertEquals(room.started, true);
+  assertEquals(fightStarted, true);
+
+  destroyRoom(room);
 });
