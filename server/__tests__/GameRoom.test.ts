@@ -71,6 +71,12 @@ const testConfig = {
   walkSpeed: 4,
   jumpVelY: -12,
   weight: 1,
+  description: "Test fighter",
+  nickname: "Tester",
+  scale: 1.0,
+  tint: 16777215,
+  portraitFrame: 0,
+  maxHp: 1000,
 };
 
 function createMockRoom(): Room {

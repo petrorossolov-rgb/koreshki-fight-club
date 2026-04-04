@@ -1,20 +1,17 @@
 import type { ClientMsg } from "@shared/types.ts";
-import type { CharacterConfig } from "@shared/types.ts";
 import { createRoom, joinRoom, setReady, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
 import { startGameRoom } from "./GameRoom.ts";
+import { loadAllConfigs, getDefaultConfig } from "./charConfigs.ts";
 
-// Load default character config for server-side engine
-let defaultConfig: CharacterConfig;
+// ── Load all character configs from manifest ──────────────────────
 try {
-  const configText = await Deno.readTextFile(
-    new URL("../public/data/characters/default.json", import.meta.url),
-  );
-  defaultConfig = JSON.parse(configText);
-  console.log(`[server] loaded character config: ${defaultConfig.displayName}`);
+  await loadAllConfigs(import.meta.url);
 } catch (e) {
-  console.error("[server] failed to load default character config:", e);
+  console.error("[server] failed to load character configs:", e);
   Deno.exit(1);
 }
+
+const defaultConfig = getDefaultConfig();
 
 const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
 const CORS_ORIGIN = Deno.env.get("CORS_ORIGIN") ?? "*";
