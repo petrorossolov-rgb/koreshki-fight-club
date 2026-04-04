@@ -5,17 +5,22 @@ export class GameOver extends Scene {
         super('GameOver');
     }
 
-    create(data: { winner?: number; mode?: string }): void {
+    create(data: { winner?: number; mode?: string; winnerName?: string; winnerTint?: number }): void {
         this.cameras.main.setBackgroundColor(0x0a0a1e);
 
         const winner = data.winner ?? 0;
         const isOnline = data.mode === 'online';
+        const winnerName = data.winnerName ?? `PLAYER ${winner}`;
+        const winnerTint = data.winnerTint ?? 0xFFCC00;
+
+        // Convert tint number to CSS hex color
+        const tintColor = '#' + (winnerTint & 0xFFFFFF).toString(16).padStart(6, '0');
 
         // Winner text
-        const winnerText = this.add.text(512, 160, `PLAYER ${winner} WINS`, {
+        const winnerText = this.add.text(512, 160, `${winnerName} WINS!`, {
             fontFamily: 'Arial Black',
             fontSize: '56px',
-            color: '#ffcc00',
+            color: tintColor,
             stroke: '#000000',
             strokeThickness: 6,
             align: 'center',

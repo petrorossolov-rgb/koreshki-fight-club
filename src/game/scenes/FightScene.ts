@@ -124,8 +124,14 @@ export class FightScene extends Scene {
         // Transition to GameOver on match end
         if (roundPhase === RoundPhase.MatchEnd) {
             this.cleanupNetwork();
-            const winner = fighters[0].roundWins > fighters[1].roundWins ? 1 : 2;
-            this.scene.start('GameOver', { winner, mode: this.mode });
+            const winnerIdx = fighters[0].roundWins > fighters[1].roundWins ? 0 : 1;
+            const winnerConfig = winnerIdx === 0 ? this.p1Config : this.p2Config;
+            this.scene.start('GameOver', {
+                winner: winnerIdx + 1,
+                mode: this.mode,
+                winnerName: winnerConfig.nickname || winnerConfig.id,
+                winnerTint: winnerConfig.tint,
+            });
         }
     }
 
