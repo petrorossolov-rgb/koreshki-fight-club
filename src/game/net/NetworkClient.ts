@@ -17,7 +17,8 @@ export interface NetworkCallbacks {
     onRoomCreated?: (code: string) => void;
     onRoomJoined?: (playerIndex: 0 | 1) => void;
     onOpponentJoined?: () => void;
-    onFightStart?: (playerIndex: 0 | 1) => void;
+    onOpponentSelected?: () => void;
+    onFightStart?: (playerIndex: 0 | 1, p1CharId: string, p2CharId: string) => void;
     onStateUpdate?: (state: GameState, frame: number) => void;
     onOpponentDisconnected?: () => void;
     onError?: (message: string) => void;
@@ -84,6 +85,10 @@ export class NetworkClient {
         this.send({ type: 'ready' });
     }
 
+    selectCharacter(characterId: string): void {
+        this.send({ type: 'select_character', characterId });
+    }
+
     sendInput(frame: number, bits: number): void {
         this.send({ type: 'input', frame, bits });
     }
@@ -116,10 +121,14 @@ export class NetworkClient {
                 this.callbacks.onOpponentJoined?.();
                 break;
 
+            case 'opponent_selected':
+                this.callbacks.onOpponentSelected?.();
+                break;
+
             case 'fight_start':
                 this._playerIndex = msg.playerIndex;
                 this.setState(NetState.InFight);
-                this.callbacks.onFightStart?.(msg.playerIndex);
+                this.callbacks.onFightStart?.(msg.playerIndex, msg.p1CharId, msg.p2CharId);
                 break;
 
             case 'state_update':

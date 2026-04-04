@@ -239,7 +239,7 @@ export class MainMenu extends Scene {
             this.showWaitingForReady();
         };
 
-        this.net.callbacks.onFightStart = (playerIndex: 0 | 1) => {
+        this.net.callbacks.onFightStart = (playerIndex: 0 | 1, _p1CharId: string, _p2CharId: string) => {
             this.scene.start('FightScene', {
                 mode: 'online',
                 networkClient: this.net,
