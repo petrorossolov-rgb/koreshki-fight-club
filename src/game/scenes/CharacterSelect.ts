@@ -37,6 +37,23 @@ const GRID_LEFT_BASE = 512; // center of 1024
 
 const SHARED_TEXTURE = 'martial-hero';
 
+const DETAIL_Y = 340;
+const DETAIL_H = 180;
+
+const STAT_COLORS: Record<string, number> = {
+    power: 0xff4444,
+    speed: 0x4488ff,
+    health: 0x44cc44,
+};
+const STAT_LABELS: Record<string, string> = {
+    power: 'PWR',
+    speed: 'SPD',
+    health: 'HP',
+};
+const STAT_MAX = 8;
+const BAR_W = 120;
+const BAR_H = 14;
+
 // ── Scene ─────────────────────────────────────────────────────────
 
 export class CharacterSelect extends Scene {
@@ -46,11 +63,17 @@ export class CharacterSelect extends Scene {
 
     // Grid state
     private cells: GameObjects.Container[] = [];
-    private selectedIndex = -1;
+    selectedIndex = -1;
     private highlightBorder: GameObjects.Rectangle | null = null;
 
-    // Detail panel (populated in T10)
-    detailContainer!: GameObjects.Container;
+    // Detail panel
+    private detailContainer!: GameObjects.Container;
+    private previewSprite: GameObjects.Sprite | null = null;
+    private detailName!: GameObjects.Text;
+    private detailNickname!: GameObjects.Text;
+    private detailDesc!: GameObjects.Text;
+    private statBars: GameObjects.Rectangle[] = [];
+    private statLabels: GameObjects.Text[] = [];
 
     // Confirm button (populated in T11)
     confirmContainer!: GameObjects.Container;
@@ -79,12 +102,15 @@ export class CharacterSelect extends Scene {
         }).setOrigin(0.5);
 
         this.createGrid();
-
-        // Detail panel placeholder container (T10 will populate)
-        this.detailContainer = this.add.container(0, 0);
+        this.createDetailPanel();
 
         // Confirm button placeholder container (T11 will populate)
         this.confirmContainer = this.add.container(0, 0);
+
+        // Listen for selection changes to update detail panel
+        this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
+            this.updateDetailPanel(entry);
+        });
     }
 
     // ── Grid ──────────────────────────────────────────────────────
@@ -159,6 +185,108 @@ export class CharacterSelect extends Scene {
 
         bg.setInteractive({ useHandCursor: true });
         bg.on('pointerdown', () => this.selectCell(index));
+    }
+
+    // ── Detail Panel ──────────────────────────────────────────────
+
+    private createDetailPanel(): void {
+        this.detailContainer = this.add.container(0, 0);
+
+        // Background panel
+        const panelBg = this.add.rectangle(512, DETAIL_Y + DETAIL_H / 2, 920, DETAIL_H, 0x111128, 0.85)
+            .setStrokeStyle(1, 0x333366);
+        this.detailContainer.add(panelBg);
+
+        // Name (center-left)
+        this.detailName = this.add.text(280, DETAIL_Y + 15, '', {
+            fontFamily: 'Arial Black', fontSize: '26px', color: '#ffffff',
+            stroke: '#000000', strokeThickness: 3,
+        });
+        this.detailContainer.add(this.detailName);
+
+        // Nickname
+        this.detailNickname = this.add.text(280, DETAIL_Y + 50, '', {
+            fontFamily: 'Arial', fontSize: '18px', color: '#ffcc00',
+            fontStyle: 'italic',
+        });
+        this.detailContainer.add(this.detailNickname);
+
+        // Description
+        this.detailDesc = this.add.text(280, DETAIL_Y + 80, '', {
+            fontFamily: 'Arial', fontSize: '14px', color: '#aaaaaa',
+            wordWrap: { width: 360 },
+        });
+        this.detailContainer.add(this.detailDesc);
+
+        // Stat bars (right side)
+        const statX = 720;
+        const statKeys = ['power', 'speed', 'health'];
+        for (let i = 0; i < statKeys.length; i++) {
+            const key = statKeys[i];
+            const y = DETAIL_Y + 25 + i * (BAR_H + 14);
+
+            const label = this.add.text(statX, y, STAT_LABELS[key], {
+                fontFamily: 'Arial', fontSize: '13px', color: '#cccccc',
+            }).setOrigin(0, 0.5);
+            this.detailContainer.add(label);
+            this.statLabels.push(label);
+
+            // Bar background
+            const barBg = this.add.rectangle(statX + 40, y, BAR_W, BAR_H, 0x222244).setOrigin(0, 0.5);
+            this.detailContainer.add(barBg);
+
+            // Bar fill
+            const bar = this.add.rectangle(statX + 40, y, 0, BAR_H, STAT_COLORS[key]).setOrigin(0, 0.5);
+            this.detailContainer.add(bar);
+            this.statBars.push(bar);
+        }
+
+        // Initially hidden until a character is selected
+        this.detailContainer.setVisible(false);
+    }
+
+    private updateDetailPanel(entry: ManifestEntry): void {
+        this.detailContainer.setVisible(true);
+
+        this.detailName.setText(entry.displayName);
+        this.detailNickname.setText(`"${entry.nickname}"`);
+        this.detailDesc.setText(entry.description);
+
+        // Update stat bars
+        const statKeys = ['power', 'speed', 'health'];
+        for (let i = 0; i < statKeys.length; i++) {
+            const value = entry.stats[statKeys[i] as keyof typeof entry.stats];
+            this.statBars[i].width = (value / STAT_MAX) * BAR_W;
+        }
+
+        // Update preview sprite
+        if (this.previewSprite) {
+            this.previewSprite.destroy();
+            this.previewSprite = null;
+        }
+
+        // Create idle animation for preview
+        const animKey = `preview_${entry.id}_idle`;
+        if (!this.anims.exists(animKey)) {
+            // idle animation: frames 0-9 (same for all chars sharing the spritesheet)
+            this.anims.create({
+                key: animKey,
+                frames: this.anims.generateFrameNumbers(SHARED_TEXTURE, { start: 0, end: 9 }),
+                frameRate: 10,
+                repeat: -1,
+            });
+        }
+
+        this.previewSprite = this.add.sprite(140, DETAIL_Y + DETAIL_H / 2 + 20, SHARED_TEXTURE);
+        this.previewSprite.setOrigin(0.5, 1);
+        this.previewSprite.play(animKey);
+
+        // Apply character visual properties
+        // Scale relative to 1.0: show at ~1.5x for nice preview size
+        this.previewSprite.setScale(entry.category === 'big' ? 1.5 : entry.category === 'tall' ? 1.4 : entry.category === 'short' ? 1.1 : 1.3);
+        if (entry.tint !== 0xFFFFFF) this.previewSprite.setTint(entry.tint);
+
+        this.detailContainer.add(this.previewSprite);
     }
 
     // ── Selection ─────────────────────────────────────────────────
