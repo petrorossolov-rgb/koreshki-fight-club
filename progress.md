@@ -18,6 +18,8 @@
 - **Room callbacks**: Room has `onDestroy`, `onInput`, `onFightStart` callbacks — keeps RoomManager decoupled from GameRoom
 - **NetworkClient ownership**: MainMenu creates NetworkClient, transfers it to FightScene on fight_start (nulls its own ref). FightScene cleans up callbacks on exit.
 - **Vite env vars**: `import.meta.env.VITE_WS_URL` — typed via `vite/client`, set via `.env` file or `VITE_WS_URL=... npm run build`
+- **Sprite orientation**: Martial Hero spritesheet faces LEFT by default. `setFlipX(state.facingRight)` — flip when facing right, default when facing left.
+- **Phaser setPath scope**: `setPath('assets')` applies to ALL subsequent loads. Reset with `setPath('')` before loading assets outside the `assets/` directory.
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -227,3 +229,17 @@
 - **Status**: ✅ Done
 - **Files changed**: `docs/testing-checklist.md` (new)
 - **Learnings**: Checklist covers local mode, online mode, cross-device matrix, and performance — actual testing requires deploy.
+
+## [2026-04-04] — INCIDENT: Fighters facing same direction
+- **Symptom**: both fighters face the same direction instead of facing each other
+- **Root cause**: Martial Hero spritesheet default orientation is LEFT, but `Fighter.syncToState()` used `setFlipX(!state.facingRight)` — inverted logic. P1 stayed at default LEFT, P2 flipped to RIGHT.
+- **Fix**: changed to `setFlipX(state.facingRight)` in `Fighter.ts:41`
+- **Prevention**: test sprite orientation when integrating new spritesheets; add visual regression test
+- **Time to resolve**: 2 phases (triage + fix)
+
+## [2026-04-04] — INCIDENT: JSON config 404 on GitHub Pages
+- **Symptom**: clicking LOCAL froze the game on deployed site
+- **Root cause**: Phaser `setPath('assets')` was prepending `assets/` to JSON load path, resulting in 404 for `assets/data/characters/default.json` (actual path: `data/characters/default.json`)
+- **Fix**: reset `setPath('')` before loading JSON in `Preloader.ts`
+- **Prevention**: verify all asset paths resolve correctly in production builds
+- **Time to resolve**: 1 phase
