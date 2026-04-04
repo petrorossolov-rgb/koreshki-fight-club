@@ -128,7 +128,7 @@ export class FightScene extends Scene {
     private setupNetworkCallbacks(): void {
         if (!this.networkClient) return;
 
-        this.networkClient.callbacks.onStateUpdate = (state: GameState) => {
+        this.networkClient.callbacks.onStateUpdate = (state: GameState, _frame: number) => {
             this.remoteState = state;
         };
 

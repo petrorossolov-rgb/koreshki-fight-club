@@ -1,5 +1,5 @@
-import { InputBit, TopState } from '@shared/types';
-import type { FighterState, CharacterConfig, MoveDef } from '@shared/types';
+import { InputBit, TopState } from './types';
+import type { FighterState, CharacterConfig, MoveDef } from './types';
 
 // ── State handler interface ─────────────────────────────────────────
 

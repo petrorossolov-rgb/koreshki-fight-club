@@ -26,6 +26,7 @@
 
 ## Follow-ups
 <!-- Tasks deferred from /incident or /change that need proper implementation later. -->
+- [ ] [2026-04-04] Mobile room code input — Phaser keyboard events don't open mobile keyboard. Need HTML `<input>` overlay for room code entry on touch devices.
 
 ## Task Log
 

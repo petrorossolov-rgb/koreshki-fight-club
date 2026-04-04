@@ -1,7 +1,6 @@
 {
   "imports": {
-    "@shared/": "../src/shared/",
-    "@game/": "../src/game/"
+    "@shared/": "../src/shared/"
   },
   "unstable": ["sloppy-imports"],
   "compilerOptions": {

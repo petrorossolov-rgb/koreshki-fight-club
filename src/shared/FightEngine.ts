@@ -2,7 +2,7 @@ import { TopState, RoundPhase, InputBit } from './types';
 import type { FighterState, GameState, CharacterConfig, HitResult } from './types';
 import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES, ROUND_TIME, ROUNDS_TO_WIN, INTRO_FRAMES, KO_FRAMES } from './constants';
 import { applyGravity, applyVelocity, clampToStage, resolvePushboxes } from './PhysicsSystem';
-import { tickFSM, transition } from '@game/entities/FighterFSM';
+import { tickFSM, transition } from './FighterFSM';
 import { checkHit } from './CollisionSystem';
 
 // ── Factory ─────────────────────────────────────────────────────────

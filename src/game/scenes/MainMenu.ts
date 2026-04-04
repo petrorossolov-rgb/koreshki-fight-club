@@ -13,6 +13,7 @@ export class MainMenu extends Scene {
     private uiContainer!: GameObjects.Container;
     private statusText!: GameObjects.Text;
     private codeInput = '';
+    private domInput: HTMLInputElement | null = null;
 
     constructor() {
         super('MainMenu');
@@ -35,6 +36,8 @@ export class MainMenu extends Scene {
         }
 
         this.showMainView();
+
+        this.events.on('shutdown', () => this.removeDomInput());
     }
 
     // ── Views ──────────────────────────────────────────────────────
@@ -43,6 +46,14 @@ export class MainMenu extends Scene {
         this.uiContainer.removeAll(true);
         this.statusText.setText('');
         this.codeInput = '';
+        this.removeDomInput();
+    }
+
+    private removeDomInput(): void {
+        if (this.domInput) {
+            this.domInput.remove();
+            this.domInput = null;
+        }
     }
 
     private showMainView(): void {
@@ -102,7 +113,19 @@ export class MainMenu extends Scene {
         }).setOrigin(0.5);
         this.uiContainer.add(codeDisplay);
 
-        // Keyboard input for code
+        const onCodeUpdate = (value: string) => {
+            this.codeInput = value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+            codeDisplay.setText(this.codeInput.padEnd(4, '_'));
+            if (this.codeInput.length === 4) {
+                this.removeDomInput();
+                this.connectAndDo(() => this.net!.joinRoom(this.codeInput));
+            }
+        };
+
+        // HTML input for mobile virtual keyboard support
+        this.createDomInput(onCodeUpdate);
+
+        // Phaser keyboard fallback for desktop
         this.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
             if (this.view !== 'join') return;
             const key = event.key.toUpperCase();
@@ -111,17 +134,58 @@ export class MainMenu extends Scene {
             } else if (/^[A-Z]$/.test(key) && this.codeInput.length < 4) {
                 this.codeInput += key;
             }
-            codeDisplay.setText(this.codeInput.padEnd(4, '_'));
-
-            if (this.codeInput.length === 4) {
-                this.connectAndDo(() => this.net!.joinRoom(this.codeInput));
-            }
+            onCodeUpdate(this.codeInput);
         });
 
         this.addButton(512, 420, 'BACK', () => {
             this.disconnectNet();
             this.showOnlineView();
         });
+    }
+
+    private createDomInput(onChange: (value: string) => void): void {
+        this.removeDomInput();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 4;
+        input.autocomplete = 'off';
+        input.autocapitalize = 'characters';
+        input.inputMode = 'text';
+        input.placeholder = 'CODE';
+
+        Object.assign(input.style, {
+            position: 'fixed',
+            left: '50%',
+            top: '60%',
+            transform: 'translate(-50%, -50%)',
+            width: '200px',
+            fontSize: '32px',
+            fontFamily: 'Courier New, monospace',
+            textAlign: 'center',
+            textTransform: 'uppercase',
+            letterSpacing: '8px',
+            padding: '8px',
+            background: 'rgba(0, 0, 0, 0.7)',
+            color: '#ffcc00',
+            border: '2px solid #ffcc00',
+            borderRadius: '8px',
+            outline: 'none',
+            zIndex: '1000',
+            caretColor: '#ffcc00',
+        });
+
+        input.addEventListener('input', () => {
+            onChange(input.value);
+        });
+
+        document.body.appendChild(input);
+        this.domInput = input;
+
+        // Auto-focus on touch devices to open keyboard
+        if (isTouchDevice()) {
+            setTimeout(() => input.focus(), 100);
+        }
     }
 
     private showWaitingForReady(): void {
