@@ -61,7 +61,7 @@ export class MainMenu extends Scene {
         this.clearUI();
 
         this.addButton(512, 280, 'LOCAL', () => {
-            this.scene.start('FightScene', { mode: 'local' } as FightSceneData);
+            this.scene.start('CharacterSelect', { mode: 'local' });
         });
 
         this.addButton(512, 350, 'ONLINE', () => {

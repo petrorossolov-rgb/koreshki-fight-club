@@ -34,7 +34,7 @@ export class GameOver extends Scene {
         // REMATCH button (only in local mode — online rematch needs lobby)
         if (!isOnline) {
             this.createButton(512, 310, 'REMATCH', () => {
-                this.scene.start('FightScene', { mode: 'local' });
+                this.scene.start('CharacterSelect', { mode: 'local' });
             });
         }
 
