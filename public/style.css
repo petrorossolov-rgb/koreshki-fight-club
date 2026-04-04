@@ -3,6 +3,7 @@ body {
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
     background-color: #0f0f0f;
+    overflow: hidden;
 }
 
 #app {
@@ -12,4 +13,32 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Portrait warning overlay — only on small touch screens */
+#portrait-warning {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #0f0f0f;
+    color: #fff;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Arial Black', sans-serif;
+    font-size: 24px;
+    text-align: center;
+    padding: 2rem;
+}
+
+#portrait-warning span {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+@media (orientation: portrait) and (hover: none) and (pointer: coarse) {
+    #portrait-warning {
+        display: flex;
+    }
 }
