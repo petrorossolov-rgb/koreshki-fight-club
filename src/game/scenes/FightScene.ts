@@ -1,12 +1,19 @@
 import { Scene } from 'phaser';
-import type { CharacterConfig } from '@shared/types';
+import type { CharacterConfig, GameState } from '@shared/types';
 import { RoundPhase } from '@shared/types';
 import { FIXED_DT } from '@shared/constants';
 import { createFightEngine, type FightEngine } from '@shared/FightEngine';
 import { Fighter } from '@game/entities/Fighter';
-import { InputManager } from '@game/systems/InputManager';
+import { InputManager, NetworkSource } from '@game/systems/InputManager';
 import { HealthBar } from '@game/ui/HealthBar';
 import { RoundDisplay } from '@game/ui/RoundDisplay';
+import { NetworkClient } from '@game/net/NetworkClient';
+
+export interface FightSceneData {
+    mode: 'local' | 'online';
+    networkClient?: NetworkClient;
+    playerIndex?: 0 | 1;
+}
 
 export class FightScene extends Scene {
     private engine!: FightEngine;
@@ -16,8 +23,21 @@ export class FightScene extends Scene {
     private roundDisplay!: RoundDisplay;
     private accumulator = 0;
 
+    // Online mode state
+    private mode: 'local' | 'online' = 'local';
+    private networkClient: NetworkClient | null = null;
+    private localPlayerIndex: 0 | 1 = 0;
+    private remoteState: GameState | null = null;
+
     constructor() {
         super('FightScene');
+    }
+
+    init(data?: FightSceneData): void {
+        this.mode = data?.mode ?? 'local';
+        this.networkClient = data?.networkClient ?? null;
+        this.localPlayerIndex = data?.playerIndex ?? 0;
+        this.remoteState = null;
     }
 
     preload(): void {
@@ -43,6 +63,13 @@ export class FightScene extends Scene {
 
         this.inputManager = new InputManager(this);
 
+        // In online mode, set remote player's source to NetworkSource
+        if (this.mode === 'online' && this.networkClient) {
+            const remoteIndex = this.localPlayerIndex === 0 ? 1 : 0;
+            this.inputManager.setSource(remoteIndex, new NetworkSource());
+            this.setupNetworkCallbacks();
+        }
+
         this.healthBars = [
             new HealthBar(this, 0),
             new HealthBar(this, 1),
@@ -53,11 +80,24 @@ export class FightScene extends Scene {
     }
 
     update(_time: number, delta: number): void {
+        // In online mode, apply server state when received
+        if (this.mode === 'online' && this.remoteState) {
+            this.applyServerState(this.remoteState);
+            this.remoteState = null;
+        }
+
         this.accumulator += delta;
 
         while (this.accumulator >= FIXED_DT) {
             const p1 = this.inputManager.readInput(0);
             const p2 = this.inputManager.readInput(1);
+
+            // In online mode, send local input to server
+            if (this.mode === 'online' && this.networkClient) {
+                const localInput = this.localPlayerIndex === 0 ? p1 : p2;
+                this.networkClient.sendInput(localInput.frame, localInput.bits);
+            }
+
             this.engine.step([p1.bits, p2.bits]);
             this.inputManager.tick();
             this.accumulator -= FIXED_DT;
@@ -79,8 +119,58 @@ export class FightScene extends Scene {
 
         // Transition to GameOver on match end
         if (roundPhase === RoundPhase.MatchEnd) {
+            this.cleanupNetwork();
             const winner = fighters[0].roundWins > fighters[1].roundWins ? 1 : 2;
-            this.scene.start('GameOver', { winner });
+            this.scene.start('GameOver', { winner, mode: this.mode });
+        }
+    }
+
+    private setupNetworkCallbacks(): void {
+        if (!this.networkClient) return;
+
+        this.networkClient.callbacks.onStateUpdate = (state: GameState) => {
+            this.remoteState = state;
+        };
+
+        this.networkClient.callbacks.onOpponentDisconnected = () => {
+            this.cleanupNetwork();
+            this.scene.start('MainMenu');
+        };
+    }
+
+    private applyServerState(serverState: GameState): void {
+        const state = this.engine.state;
+
+        // Overwrite game state from server (authoritative)
+        for (let i = 0; i < 2; i++) {
+            const local = state.fighters[i];
+            const remote = serverState.fighters[i];
+            local.x = remote.x;
+            local.y = remote.y;
+            local.velX = remote.velX;
+            local.velY = remote.velY;
+            local.hp = remote.hp;
+            local.facingRight = remote.facingRight;
+            local.topState = remote.topState;
+            local.subState = remote.subState;
+            local.frameInState = remote.frameInState;
+            local.currentMove = remote.currentMove;
+            local.hitConfirmed = remote.hitConfirmed;
+            local.stunDuration = remote.stunDuration;
+            local.hitStopFrames = remote.hitStopFrames;
+            local.roundWins = remote.roundWins;
+        }
+        state.roundPhase = serverState.roundPhase;
+        state.roundTimer = serverState.roundTimer;
+        state.currentRound = serverState.currentRound;
+        state.phaseFrames = serverState.phaseFrames;
+        state.hitStop = serverState.hitStop;
+    }
+
+    private cleanupNetwork(): void {
+        if (this.networkClient) {
+            this.networkClient.callbacks.onStateUpdate = undefined;
+            this.networkClient.callbacks.onOpponentDisconnected = undefined;
         }
     }
 }

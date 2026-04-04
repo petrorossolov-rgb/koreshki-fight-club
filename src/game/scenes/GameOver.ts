@@ -5,10 +5,11 @@ export class GameOver extends Scene {
         super('GameOver');
     }
 
-    create(data: { winner?: number }): void {
+    create(data: { winner?: number; mode?: string }): void {
         this.cameras.main.setBackgroundColor(0x0a0a1e);
 
         const winner = data.winner ?? 0;
+        const isOnline = data.mode === 'online';
 
         // Winner text
         const winnerText = this.add.text(512, 160, `PLAYER ${winner} WINS`, {
@@ -30,10 +31,12 @@ export class GameOver extends Scene {
             ease: 'Back.easeOut',
         });
 
-        // REMATCH button
-        this.createButton(512, 310, 'REMATCH', () => {
-            this.scene.start('FightScene');
-        });
+        // REMATCH button (only in local mode — online rematch needs lobby)
+        if (!isOnline) {
+            this.createButton(512, 310, 'REMATCH', () => {
+                this.scene.start('FightScene', { mode: 'local' });
+            });
+        }
 
         // MENU button
         this.createButton(512, 390, 'MENU', () => {
