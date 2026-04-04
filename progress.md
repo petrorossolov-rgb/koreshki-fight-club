@@ -14,6 +14,8 @@
 - **Blocking**: defender must hold back + be grounded + not attacking. Blocked = no damage, blockstun, knockback×0.5
 - **Round phases**: Intro(60f) → Fight → KO(120f) → RoundEnd(transient) → MatchEnd. Tests skip Intro by setting roundPhase=Fight
 - **Resolve aliases (3 places)**: `tsconfig.json` (paths), `vitest.config.ts` (resolve.alias), `vite/config.*.mjs` (resolve.alias) — all must stay in sync
+- **Server imports**: `sendMsg` lives in `server/utils.ts` (not main.ts) to avoid side-effect imports. Server code uses `.ts` extensions in imports (Deno convention).
+- **Room callbacks**: Room has `onDestroy`, `onInput`, `onFightStart` callbacks — keeps RoomManager decoupled from GameRoom
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -158,3 +160,33 @@
 - **Files changed**: `src/game/main.ts`, `src/game/scenes/MainMenu.ts`, `public/style.css`, `index.html`
 - **Learnings**: `screen.orientation.lock()` not in standard TS DOM types — needs type assertion. Portrait warning via CSS `@media (orientation: portrait) and (hover: none)` avoids JS.
 - **Patterns**: Scale FIT + CENTER_BOTH for responsive canvas. activePointers:3 for multitouch. Fullscreen button only on touch devices.
+
+## [2026-04-04] — [T24] Server scaffolding: deno.json + main.ts
+- **Status**: ✅ Done
+- **Files changed**: `server/deno.json` (new), `server/main.ts` (new)
+- **Learnings**: Deno import maps use `"@shared/": "../src/shared/"` — simple relative path mapping. Deno.serve() replaces old Deno.listen/serveHttp pattern.
+- **Patterns**: Server entrypoint loads config at top-level with `await Deno.readTextFile()`. Health check at `/health`.
+
+## [2026-04-04] — [T24.5] Server input validation + basic logging
+- **Status**: ✅ Done
+- **Files changed**: `server/main.ts`
+- **Learnings**: Rate limiting per-WebSocket with simple counter + reset timestamp. Validation returns typed ClientMsg or null.
+- **Patterns**: `validateMessage()` narrows unknown→ClientMsg with runtime checks. Rate limit: 120 msg/sec per socket.
+
+## [2026-04-04] — [T25] Create RoomManager.ts
+- **Status**: ✅ Done
+- **Files changed**: `server/RoomManager.ts` (new), `server/main.ts`
+- **Learnings**: Room lifecycle callbacks (onDestroy, onInput, onFightStart) keep RoomManager decoupled from GameRoom.
+- **Patterns**: 4-letter A-Z room codes with collision retry. playerToRoom WeakMap-like pattern for reverse lookup.
+
+## [2026-04-04] — [T26] Create GameRoom.ts
+- **Status**: ✅ Done
+- **Files changed**: `server/GameRoom.ts` (new), `server/RoomManager.ts`, `server/main.ts`
+- **Learnings**: setInterval at FIXED_DT (~16.67ms) for 60Hz loop. Broadcast every 3rd tick → ~20Hz state updates.
+- **Patterns**: GameRoom wired via Room callbacks: onInput for player input, onDestroy for cleanup. FightEngine runs identically to client.
+
+## [2026-04-04] — [T26.5] Server unit tests
+- **Status**: ✅ Done
+- **Files changed**: `server/__tests__/RoomManager.test.ts` (new), `server/__tests__/GameRoom.test.ts` (new), `server/utils.ts` (new)
+- **Learnings**: Server modules with side effects (Deno.serve) can't be imported in tests — extracted sendMsg to utils.ts to break dependency.
+- **Patterns**: Mock WebSocket with sentMessages array for assertion. Deno test requires `https://deno.land/std` imports for assert.

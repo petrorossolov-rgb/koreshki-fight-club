@@ -41,7 +41,8 @@ src/game/entities/   — visual wrappers + FSM (Fighter, FighterFSM)
 src/game/systems/    — input, camera, etc.
 src/game/ui/         — HUD elements (HealthBar, RoundDisplay, TouchControls)
 src/game/net/        — NetworkClient (WebSocket wrapper)
-server/              — Deno authoritative server (RoomManager, GameRoom)
+server/              — Deno authoritative server (main, RoomManager, GameRoom, utils)
+server/__tests__/    — Deno test files (run with `deno test`)
 public/data/         — JSON character configs
 public/assets/       — sprites, sounds, images
 ```
@@ -62,7 +63,8 @@ npm run dev          # Vite dev server (hot reload)
 npm run build        # production build
 npm test             # vitest run (single pass)
 npm run test:watch   # vitest in watch mode
-deno run --allow-net server/main.ts   # start game server
+deno run --allow-net --allow-read server/main.ts   # start game server
+deno test --allow-read server/   # run server tests
 ```
 
 ## Phases
