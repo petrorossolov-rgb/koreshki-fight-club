@@ -1,0 +1,123 @@
+{
+  "id": "leha",
+  "name": "leha",
+  "displayName": "Лёха",
+  "spriteSheet": "assets/fighters/martial-hero.png",
+  "frameWidth": 126,
+  "frameHeight": 126,
+  "animations": {
+    "idle": {
+      "key": "idle",
+      "frameStart": 0,
+      "frameEnd": 9,
+      "frameRate": 10,
+      "repeat": -1
+    },
+    "run": {
+      "key": "run",
+      "frameStart": 11,
+      "frameEnd": 18,
+      "frameRate": 12,
+      "repeat": -1
+    },
+    "jump": {
+      "key": "jump",
+      "frameStart": 22,
+      "frameEnd": 24,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "fall": {
+      "key": "fall",
+      "frameStart": 33,
+      "frameEnd": 35,
+      "frameRate": 8,
+      "repeat": -1
+    },
+    "crouch": {
+      "key": "crouch",
+      "frameStart": 33,
+      "frameEnd": 33,
+      "frameRate": 1,
+      "repeat": 0
+    },
+    "attack": {
+      "key": "attack",
+      "frameStart": 44,
+      "frameEnd": 50,
+      "frameRate": 14,
+      "repeat": 0
+    },
+    "hit": {
+      "key": "hit",
+      "frameStart": 55,
+      "frameEnd": 57,
+      "frameRate": 10,
+      "repeat": 0
+    },
+    "dead": {
+      "key": "dead",
+      "frameStart": 66,
+      "frameEnd": 76,
+      "frameRate": 10,
+      "repeat": 0
+    }
+  },
+  "moves": {
+    "punch": {
+      "name": "punch",
+      "damage": 80,
+      "startup": 3,
+      "active": 2,
+      "recovery": 5,
+      "hitbox": {
+        "x": 30,
+        "y": -50,
+        "width": 50,
+        "height": 30
+      },
+      "knockbackX": 4,
+      "knockbackY": -2,
+      "hitStunFrames": 12,
+      "blockStunFrames": 8
+    },
+    "kick": {
+      "name": "kick",
+      "damage": 120,
+      "startup": 5,
+      "active": 3,
+      "recovery": 8,
+      "hitbox": {
+        "x": 25,
+        "y": -30,
+        "width": 60,
+        "height": 40
+      },
+      "knockbackX": 6,
+      "knockbackY": -3,
+      "hitStunFrames": 16,
+      "blockStunFrames": 10
+    }
+  },
+  "pushbox": {
+    "x": -22,
+    "y": -90,
+    "width": 44,
+    "height": 90
+  },
+  "hurtbox": {
+    "x": -20,
+    "y": -85,
+    "width": 40,
+    "height": 85
+  },
+  "walkSpeed": 4.2,
+  "jumpVelY": -12,
+  "weight": 1,
+  "description": "Тайский боксер и учитель. Ставит двойки и апперкоты.",
+  "nickname": "Bolgar",
+  "scale": 1,
+  "tint": 16763904,
+  "portraitFrame": 0,
+  "maxHp": 1000
+}

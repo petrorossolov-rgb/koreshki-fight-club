@@ -1,0 +1,123 @@
+{
+  "id": "zhenek",
+  "name": "zhenek",
+  "displayName": "Женек",
+  "spriteSheet": "assets/fighters/martial-hero.png",
+  "frameWidth": 126,
+  "frameHeight": 126,
+  "animations": {
+    "idle": {
+      "key": "idle",
+      "frameStart": 0,
+      "frameEnd": 9,
+      "frameRate": 10,
+      "repeat": -1
+    },
+    "run": {
+      "key": "run",
+      "frameStart": 11,
+      "frameEnd": 18,
+      "frameRate": 12,
+      "repeat": -1
+    },
+    "jump": {
+      "key": "jump",
+      "frameStart": 22,
+      "frameEnd": 24,
+      "frameRate": 8,
+      "repeat": 0
+    },
+    "fall": {
+      "key": "fall",
+      "frameStart": 33,
+      "frameEnd": 35,
+      "frameRate": 8,
+      "repeat": -1
+    },
+    "crouch": {
+      "key": "crouch",
+      "frameStart": 33,
+      "frameEnd": 33,
+      "frameRate": 1,
+      "repeat": 0
+    },
+    "attack": {
+      "key": "attack",
+      "frameStart": 44,
+      "frameEnd": 50,
+      "frameRate": 14,
+      "repeat": 0
+    },
+    "hit": {
+      "key": "hit",
+      "frameStart": 55,
+      "frameEnd": 57,
+      "frameRate": 10,
+      "repeat": 0
+    },
+    "dead": {
+      "key": "dead",
+      "frameStart": 66,
+      "frameEnd": 76,
+      "frameRate": 10,
+      "repeat": 0
+    }
+  },
+  "moves": {
+    "punch": {
+      "name": "punch",
+      "damage": 65,
+      "startup": 2,
+      "active": 2,
+      "recovery": 4,
+      "hitbox": {
+        "x": 30,
+        "y": -45,
+        "width": 45,
+        "height": 28
+      },
+      "knockbackX": 3,
+      "knockbackY": -2,
+      "hitStunFrames": 10,
+      "blockStunFrames": 7
+    },
+    "kick": {
+      "name": "kick",
+      "damage": 100,
+      "startup": 4,
+      "active": 3,
+      "recovery": 7,
+      "hitbox": {
+        "x": 25,
+        "y": -25,
+        "width": 55,
+        "height": 35
+      },
+      "knockbackX": 5,
+      "knockbackY": -3,
+      "hitStunFrames": 14,
+      "blockStunFrames": 9
+    }
+  },
+  "pushbox": {
+    "x": -19,
+    "y": -77,
+    "width": 38,
+    "height": 77
+  },
+  "hurtbox": {
+    "x": -17,
+    "y": -72,
+    "width": 34,
+    "height": 72
+  },
+  "walkSpeed": 5,
+  "jumpVelY": -13,
+  "weight": 0.8,
+  "description": "Спортсмен-продажник. Продаст тебе нокаут со скидкой.",
+  "nickname": "The Bird guy",
+  "scale": 0.85,
+  "tint": 65382,
+  "portraitFrame": 0,
+  "maxHp": 1000
+}
