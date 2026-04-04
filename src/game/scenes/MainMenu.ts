@@ -1,11 +1,10 @@
 import { Scene, GameObjects } from 'phaser';
 import { isTouchDevice } from '@game/ui/TouchControls';
 import { NetworkClient, NetState } from '@game/net/NetworkClient';
-import type { FightSceneData } from '@game/scenes/FightScene';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000/ws';
 
-type MenuView = 'main' | 'online' | 'create' | 'join' | 'waiting';
+type MenuView = 'main' | 'online' | 'create' | 'join';
 
 export class MainMenu extends Scene {
     private net: NetworkClient | null = null;
@@ -188,12 +187,6 @@ export class MainMenu extends Scene {
         }
     }
 
-    private showWaitingForReady(): void {
-        this.view = 'waiting';
-        this.clearUI();
-        this.addLabel(512, 300, 'Connected! Starting...', '28px', '#66ff66');
-    }
-
     // ── Networking ─────────────────────────────────────────────────
 
     private connectAndDo(action: () => void): void {
@@ -228,25 +221,14 @@ export class MainMenu extends Scene {
             this.showCreateWaitingView(code);
         };
 
-        this.net.callbacks.onRoomJoined = () => {
-            // Joiner auto-sends ready
-            this.net!.sendReady();
+        this.net.callbacks.onRoomJoined = (playerIndex: 0 | 1) => {
+            // Joiner → go to CharacterSelect
+            this.goToCharacterSelect(playerIndex);
         };
 
         this.net.callbacks.onOpponentJoined = () => {
-            // Creator auto-sends ready when opponent joins
-            this.net!.sendReady();
-            this.showWaitingForReady();
-        };
-
-        this.net.callbacks.onFightStart = (playerIndex: 0 | 1, _p1CharId: string, _p2CharId: string) => {
-            this.scene.start('FightScene', {
-                mode: 'online',
-                networkClient: this.net,
-                playerIndex,
-            } as FightSceneData);
-            // Don't null out net — FightScene takes ownership
-            this.net = null;
+            // Creator → go to CharacterSelect (playerIndex already set at room_created)
+            this.goToCharacterSelect(this.net!.playerIndex);
         };
 
         this.net.callbacks.onOpponentDisconnected = () => {
@@ -257,6 +239,24 @@ export class MainMenu extends Scene {
         this.net.callbacks.onError = (message: string) => {
             this.statusText.setText(message);
         };
+    }
+
+    private goToCharacterSelect(playerIndex: 0 | 1): void {
+        // Clear MainMenu callbacks before transferring ownership
+        if (this.net) {
+            this.net.callbacks.onRoomCreated = undefined;
+            this.net.callbacks.onRoomJoined = undefined;
+            this.net.callbacks.onOpponentJoined = undefined;
+            this.net.callbacks.onOpponentDisconnected = undefined;
+            this.net.callbacks.onError = undefined;
+        }
+
+        this.scene.start('CharacterSelect', {
+            mode: 'online',
+            networkClient: this.net,
+            playerIndex,
+        });
+        this.net = null;
     }
 
     private disconnectNet(): void {
