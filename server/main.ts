@@ -1,5 +1,20 @@
 import type { ClientMsg, ServerMsg } from "@shared/types.ts";
+import type { CharacterConfig } from "@shared/types.ts";
 import { createRoom, joinRoom, setReady, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
+import { startGameRoom } from "./GameRoom.ts";
+
+// Load default character config for server-side engine
+let defaultConfig: CharacterConfig;
+try {
+  const configText = await Deno.readTextFile(
+    new URL("../public/data/characters/default.json", import.meta.url),
+  );
+  defaultConfig = JSON.parse(configText);
+  console.log(`[server] loaded character config: ${defaultConfig.displayName}`);
+} catch (e) {
+  console.error("[server] failed to load default character config:", e);
+  Deno.exit(1);
+}
 
 const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
 
@@ -87,12 +102,18 @@ function handleWebSocket(ws: WebSocket): void {
     }
 
     switch (msg.type) {
-      case "create_room":
-        createRoom(ws);
+      case "create_room": {
+        const room = createRoom(ws);
+        room.onFightStart = (r) => startGameRoom(r, defaultConfig);
         break;
-      case "join_room":
-        joinRoom(ws, msg.code);
+      }
+      case "join_room": {
+        const room = joinRoom(ws, msg.code);
+        if (room && !room.onFightStart) {
+          room.onFightStart = (r) => startGameRoom(r, defaultConfig);
+        }
         break;
+      }
       case "ready":
         setReady(ws);
         break;

@@ -8,6 +8,7 @@ export interface Room {
   started: boolean;
   onDestroy?: () => void;
   onInput?: (playerIndex: 0 | 1, bits: number) => void;
+  onFightStart?: (room: Room) => void;
 }
 
 const rooms = new Map<string, Room>();
@@ -89,6 +90,7 @@ export function setReady(ws: WebSocket): void {
     console.log(`[room] ${room.code}: fight starting`);
     if (room.players[0]) sendMsg(room.players[0], { type: "fight_start", playerIndex: 0 });
     if (room.players[1]) sendMsg(room.players[1], { type: "fight_start", playerIndex: 1 });
+    room.onFightStart?.(room);
   }
 }
 
