@@ -63,8 +63,8 @@ npm run dev          # Vite dev server (hot reload)
 npm run build        # production build
 npm test             # vitest run (single pass)
 npm run test:watch   # vitest in watch mode
-deno run --allow-net --allow-read server/main.ts   # start game server
-deno test --allow-read server/   # run server tests
+deno run --allow-net --allow-read --allow-env --config server/deno.json server/main.ts  # start game server
+cd server && deno test --allow-read --config deno.json  # run server tests
 ```
 
 ## Phases

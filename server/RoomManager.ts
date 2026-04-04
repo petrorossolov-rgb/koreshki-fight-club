@@ -1,4 +1,3 @@
-import type { ServerMsg } from "@shared/types.ts";
 import { sendMsg } from "./utils.ts";
 
 export interface Room {

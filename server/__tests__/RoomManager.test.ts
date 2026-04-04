@@ -1,4 +1,4 @@
-import { assertEquals, assertExists, assertNotEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
   createRoom,
   joinRoom,
