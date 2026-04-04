@@ -1,4 +1,5 @@
 import { Scene, GameObjects } from 'phaser';
+import type { CharacterConfig } from '@shared/types';
 import type { NetworkClient } from '@game/net/NetworkClient';
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -75,8 +76,13 @@ export class CharacterSelect extends Scene {
     private statBars: GameObjects.Rectangle[] = [];
     private statLabels: GameObjects.Text[] = [];
 
-    // Confirm button (populated in T11)
-    confirmContainer!: GameObjects.Container;
+    // Local flow state
+    private headerText!: GameObjects.Text;
+    private currentPlayer: 0 | 1 = 0;
+    private lockedChoices: [ManifestEntry | null, ManifestEntry | null] = [null, null];
+    private lockOverlay: GameObjects.Rectangle | null = null;
+    private confirmBtn!: GameObjects.Rectangle;
+    private confirmText!: GameObjects.Text;
 
     constructor() {
         super('CharacterSelect');
@@ -87,6 +93,12 @@ export class CharacterSelect extends Scene {
         this.selectedIndex = -1;
         this.highlightBorder = null;
         this.cells = [];
+        this.statBars = [];
+        this.statLabels = [];
+        this.previewSprite = null;
+        this.currentPlayer = 0;
+        this.lockedChoices = [null, null];
+        this.lockOverlay = null;
     }
 
     create(): void {
@@ -95,22 +107,27 @@ export class CharacterSelect extends Scene {
         this.manifest = this.cache.json.get('char_manifest') as ManifestData;
         this.entries = this.manifest.characters;
 
-        // Header
-        this.add.text(512, 30, 'ВЫБЕРИ БОЙЦА', {
+        // Header (updated per player in local mode)
+        this.headerText = this.add.text(512, 30, '', {
             fontFamily: 'Arial Black', fontSize: '32px', color: '#ffffff',
             stroke: '#000000', strokeThickness: 4,
         }).setOrigin(0.5);
 
         this.createGrid();
         this.createDetailPanel();
-
-        // Confirm button placeholder container (T11 will populate)
-        this.confirmContainer = this.add.container(0, 0);
+        this.createConfirmButton();
 
         // Listen for selection changes to update detail panel
         this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
             this.updateDetailPanel(entry);
         });
+
+        // Start local flow
+        if (this.data_.mode === 'local') {
+            this.setPlayerTurn(0);
+        } else {
+            this.headerText.setText('ВЫБЕРИ БОЙЦА');
+        }
     }
 
     // ── Grid ──────────────────────────────────────────────────────
@@ -287,6 +304,131 @@ export class CharacterSelect extends Scene {
         if (entry.tint !== 0xFFFFFF) this.previewSprite.setTint(entry.tint);
 
         this.detailContainer.add(this.previewSprite);
+    }
+
+    // ── Confirm Button ────────────────────────────────────────────
+
+    private createConfirmButton(): void {
+        this.confirmBtn = this.add.rectangle(512, 540, 280, 48, 0x333355)
+            .setStrokeStyle(2, 0xffffff)
+            .setInteractive({ useHandCursor: true });
+
+        this.confirmText = this.add.text(512, 540, 'ПОДТВЕРДИТЬ', {
+            fontFamily: 'Arial Black', fontSize: '22px', color: '#ffffff',
+        }).setOrigin(0.5);
+
+        this.confirmBtn.on('pointerover', () => { this.confirmBtn.fillColor = 0x555577; });
+        this.confirmBtn.on('pointerout', () => { this.confirmBtn.fillColor = 0x333355; });
+        this.confirmBtn.on('pointerdown', () => this.onConfirm());
+
+        // Hidden until a character is selected
+        this.confirmBtn.setVisible(false);
+        this.confirmText.setVisible(false);
+    }
+
+    private showConfirmButton(visible: boolean): void {
+        this.confirmBtn.setVisible(visible);
+        this.confirmText.setVisible(visible);
+    }
+
+    // ── Local Flow ────────────────────────────────────────────────
+
+    private setPlayerTurn(player: 0 | 1): void {
+        this.currentPlayer = player;
+        this.selectedIndex = -1;
+        if (this.highlightBorder) {
+            this.highlightBorder.destroy();
+            this.highlightBorder = null;
+        }
+        this.detailContainer.setVisible(false);
+        this.showConfirmButton(false);
+
+        const color = player === 0 ? '#4488ff' : '#ff4444';
+        const label = player === 0 ? 'P1' : 'P2';
+        this.headerText.setText(`${label}: ВЫБЕРИ БОЙЦА`);
+        this.headerText.setColor(color);
+
+        // Update highlight color for this player
+        this.events.removeAllListeners('characterSelected');
+        this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
+            this.updateDetailPanel(entry);
+            this.showConfirmButton(true);
+            // Update highlight border color per player
+            if (this.highlightBorder) {
+                this.highlightBorder.setStrokeStyle(3, player === 0 ? 0x4488ff : 0xff4444);
+            }
+        });
+    }
+
+    private onConfirm(): void {
+        if (this.selectedIndex < 0) return;
+        const entry = this.entries[this.selectedIndex];
+
+        if (this.data_.mode === 'local') {
+            this.lockedChoices[this.currentPlayer] = entry;
+
+            if (this.currentPlayer === 0) {
+                // Lock P1 choice visually
+                this.showP1Lock(entry);
+                this.setPlayerTurn(1);
+            } else {
+                // Both selected — load configs and start fight
+                this.loadConfigsAndStart();
+            }
+        }
+    }
+
+    private showP1Lock(entry: ManifestEntry): void {
+        // Dim overlay on the locked cell
+        const cell = this.cells[this.selectedIndex];
+        this.lockOverlay = this.add.rectangle(cell.x, cell.y, CELL_W, CELL_H, 0x4488ff, 0.3);
+        const lockText = this.add.text(cell.x, cell.y - 20, 'P1', {
+            fontFamily: 'Arial Black', fontSize: '16px', color: '#4488ff',
+            stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5);
+        this.add.existing(lockText);
+    }
+
+    private loadConfigsAndStart(): void {
+        const p1Entry = this.lockedChoices[0]!;
+        const p2Entry = this.lockedChoices[1]!;
+
+        this.headerText.setText('ЗАГРУЗКА...');
+        this.headerText.setColor('#ffffff');
+        this.showConfirmButton(false);
+
+        // Collect unique files to load
+        const toLoad: { id: string; file: string }[] = [];
+        if (!this.cache.json.has(p1Entry.id)) {
+            toLoad.push({ id: p1Entry.id, file: p1Entry.file });
+        }
+        if (p2Entry.id !== p1Entry.id && !this.cache.json.has(p2Entry.id)) {
+            toLoad.push({ id: p2Entry.id, file: p2Entry.file });
+        }
+
+        if (toLoad.length === 0) {
+            this.startFight(p1Entry, p2Entry);
+            return;
+        }
+
+        for (const item of toLoad) {
+            this.load.json(item.id, item.file);
+        }
+        this.load.once('complete', () => {
+            this.startFight(p1Entry, p2Entry);
+        });
+        this.load.start();
+    }
+
+    private startFight(p1Entry: ManifestEntry, p2Entry: ManifestEntry): void {
+        const p1Config = this.cache.json.get(p1Entry.id) as CharacterConfig;
+        const p2Config = this.cache.json.get(p2Entry.id) as CharacterConfig;
+
+        this.scene.start('FightScene', {
+            mode: 'local',
+            p1Config,
+            p2Config,
+        });
     }
 
     // ── Selection ─────────────────────────────────────────────────
