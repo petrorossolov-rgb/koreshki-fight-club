@@ -30,6 +30,26 @@ const cfg: CharacterConfig = {
     weight: 1,
 };
 
+const cfgWithMoves: CharacterConfig = {
+    ...cfg,
+    moves: {
+        punch: {
+            name: 'punch', damage: 80,
+            startup: 3, active: 2, recovery: 5,
+            hitbox: { x: 30, y: -50, width: 50, height: 30 },
+            knockbackX: 4, knockbackY: -2,
+            hitStunFrames: 12, blockStunFrames: 8,
+        },
+        kick: {
+            name: 'kick', damage: 120,
+            startup: 5, active: 3, recovery: 8,
+            hitbox: { x: 25, y: -30, width: 60, height: 40 },
+            knockbackX: 6, knockbackY: -3,
+            hitStunFrames: 16, blockStunFrames: 10,
+        },
+    },
+};
+
 describe('FighterFSM', () => {
     it('idle -> walkForward on RIGHT (facing right)', () => {
         const f = makeFighter();
@@ -102,5 +122,106 @@ describe('FighterFSM', () => {
         expect(f.frameInState).toBe(1);
         tickFSM(f, 0, cfg);
         expect(f.frameInState).toBe(2);
+    });
+
+    // ── Attack states (T13) ──────────────────────────────────────
+
+    it('idle -> grounded/attack on PUNCH', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH, cfgWithMoves);
+        expect(f.topState).toBe(TopState.Grounded);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('punch');
+        expect(f.velX).toBe(0);
+    });
+
+    it('idle -> grounded/attack on KICK', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.KICK, cfgWithMoves);
+        expect(f.topState).toBe(TopState.Grounded);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('kick');
+    });
+
+    it('attack state tracks frameInState through startup->active->recovery', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH, cfgWithMoves); // -> attack, frameInState=1
+        const move = cfgWithMoves.moves['punch'];
+        const total = move.startup + move.active + move.recovery;
+        // Tick through entire move duration
+        for (let i = 1; i < total; i++) {
+            tickFSM(f, 0, cfgWithMoves);
+            expect(f.subState).toBe('attack');
+        }
+        // One more tick -> back to idle
+        tickFSM(f, 0, cfgWithMoves);
+        expect(f.subState).toBe('idle');
+        expect(f.currentMove).toBeNull();
+    });
+
+    it('attack clears currentMove on exit', () => {
+        const f = makeFighter({
+            topState: TopState.Grounded,
+            subState: 'attack',
+            currentMove: 'punch',
+            frameInState: 99, // past total
+        });
+        tickFSM(f, 0, cfgWithMoves);
+        expect(f.currentMove).toBeNull();
+    });
+
+    it('hitstun/standing -> idle after hitStunFrames', () => {
+        const f = makeFighter({
+            topState: TopState.Hitstun,
+            subState: 'standing',
+            currentMove: 'punch', // the move that caused hitstun
+        });
+        const stunFrames = cfgWithMoves.moves['punch'].hitStunFrames;
+        // frameInState starts at 0, update checks >= stunFrames,
+        // increment happens after update, so need stunFrames+1 ticks
+        for (let i = 0; i < stunFrames; i++) {
+            tickFSM(f, 0, cfgWithMoves);
+            expect(f.topState).toBe(TopState.Hitstun);
+        }
+        tickFSM(f, 0, cfgWithMoves); // this tick sees frameInState=stunFrames
+        expect(f.topState).toBe(TopState.Grounded);
+        expect(f.subState).toBe('idle');
+    });
+
+    it('blockstun/standing -> idle after blockStunFrames', () => {
+        const f = makeFighter({
+            topState: TopState.Blockstun,
+            subState: 'standing',
+            currentMove: 'punch',
+        });
+        const stunFrames = cfgWithMoves.moves['punch'].blockStunFrames;
+        for (let i = 0; i < stunFrames; i++) {
+            tickFSM(f, 0, cfgWithMoves);
+            expect(f.topState).toBe(TopState.Blockstun);
+        }
+        tickFSM(f, 0, cfgWithMoves);
+        expect(f.topState).toBe(TopState.Grounded);
+        expect(f.subState).toBe('idle');
+    });
+
+    it('knockdown/getup -> idle after 30 frames', () => {
+        const f = makeFighter({
+            topState: TopState.Knockdown,
+            subState: 'getup',
+        });
+        for (let i = 0; i < 30; i++) {
+            tickFSM(f, 0, cfgWithMoves);
+            expect(f.subState).toBe('getup');
+        }
+        tickFSM(f, 0, cfgWithMoves);
+        expect(f.topState).toBe(TopState.Grounded);
+        expect(f.subState).toBe('idle');
+    });
+
+    it('PUNCH takes priority over movement', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH | InputBit.RIGHT, cfgWithMoves);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('punch');
     });
 });

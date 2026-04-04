@@ -1,5 +1,5 @@
 import { InputBit, TopState } from '@shared/types';
-import type { FighterState, CharacterConfig } from '@shared/types';
+import type { FighterState, CharacterConfig, MoveDef } from '@shared/types';
 
 // ── State handler interface ─────────────────────────────────────────
 
@@ -25,11 +25,33 @@ function facingDir(f: FighterState): number {
     return f.facingRight ? 1 : -1;
 }
 
+function getMove(f: FighterState, cfg: CharacterConfig): MoveDef | null {
+    return f.currentMove ? cfg.moves[f.currentMove] ?? null : null;
+}
+
+function totalMoveFrames(move: MoveDef): number {
+    return move.startup + move.active + move.recovery;
+}
+
+/** Check for attack input and transition to grounded/attack if a move exists. */
+function tryAttack(f: FighterState, bits: number, cfg: CharacterConfig): boolean {
+    let moveKey: string | null = null;
+    if (has(bits, InputBit.PUNCH) && cfg.moves['punch']) moveKey = 'punch';
+    else if (has(bits, InputBit.KICK) && cfg.moves['kick']) moveKey = 'kick';
+    if (moveKey) {
+        f.currentMove = moveKey;
+        transition(f, cfg, TopState.Grounded, 'attack');
+        return true;
+    }
+    return false;
+}
+
 // ── State handlers ──────────────────────────────────────────────────
 
 const idle: StateHandler = {
     enter() {},
     update(f, bits, cfg) {
+        if (tryAttack(f, bits, cfg)) return;
         if (has(bits, InputBit.UP)) {
             transition(f, cfg, TopState.Airborne, 'jump');
             return;
@@ -52,6 +74,7 @@ const idle: StateHandler = {
 const walkForward: StateHandler = {
     enter(f, cfg) { f.velX = cfg.walkSpeed * facingDir(f); },
     update(f, bits, cfg) {
+        if (tryAttack(f, bits, cfg)) return;
         if (has(bits, InputBit.UP)) {
             transition(f, cfg, TopState.Airborne, 'jump');
             return;
@@ -72,6 +95,7 @@ const walkForward: StateHandler = {
 const walkBackward: StateHandler = {
     enter(f, cfg) { f.velX = -cfg.walkSpeed * facingDir(f) * 0.7; },
     update(f, bits, cfg) {
+        if (tryAttack(f, bits, cfg)) return;
         if (has(bits, InputBit.UP)) {
             transition(f, cfg, TopState.Airborne, 'jump');
             return;
@@ -95,6 +119,88 @@ const crouch: StateHandler = {
         if (!has(bits, InputBit.DOWN)) {
             transition(f, cfg, TopState.Grounded, 'idle');
             return;
+        }
+    },
+    exit() {},
+};
+
+// ── Attack states ──────────────────────────────────────────────────
+
+const attack: StateHandler = {
+    enter(f) {
+        f.velX = 0;
+        // currentMove must be set BEFORE transitioning to this state
+    },
+    update(f, _bits, cfg) {
+        const move = getMove(f, cfg);
+        if (!move) {
+            transition(f, cfg, TopState.Grounded, 'idle');
+            return;
+        }
+        if (f.frameInState >= totalMoveFrames(move)) {
+            transition(f, cfg, TopState.Grounded, 'idle');
+        }
+    },
+    exit(f) {
+        f.currentMove = null;
+    },
+};
+
+const block: StateHandler = {
+    enter(f) { f.velX = 0; },
+    update(f, bits, cfg) {
+        // Hold back to keep blocking; release to return to idle
+        const holdingBack = f.facingRight ? has(bits, InputBit.LEFT) : has(bits, InputBit.RIGHT);
+        if (!holdingBack) {
+            transition(f, cfg, TopState.Grounded, 'idle');
+        }
+    },
+    exit() {},
+};
+
+// ── Hitstun / knockdown states ─────────────────────────────────────
+
+const hitstunStanding: StateHandler = {
+    enter(f) { f.velX = 0; },
+    update(f, _bits, cfg) {
+        const move = f.currentMove ? cfg.moves[f.currentMove] ?? null : null;
+        const stunFrames = move ? move.hitStunFrames : 12;
+        if (f.frameInState >= stunFrames) {
+            transition(f, cfg, TopState.Grounded, 'idle');
+        }
+    },
+    exit(f) { f.currentMove = null; },
+};
+
+const blockstunStanding: StateHandler = {
+    enter(f) { f.velX = 0; },
+    update(f, _bits, cfg) {
+        const move = f.currentMove ? cfg.moves[f.currentMove] ?? null : null;
+        const stunFrames = move ? move.blockStunFrames : 8;
+        if (f.frameInState >= stunFrames) {
+            transition(f, cfg, TopState.Grounded, 'idle');
+        }
+    },
+    exit(f) { f.currentMove = null; },
+};
+
+const knockdownFalling: StateHandler = {
+    enter() {},
+    update(f, _bits, cfg) {
+        // Wait until landed (y >= FLOOR_Y handled by physics), then get up
+        if (f.topState === TopState.Knockdown && f.velY === 0 && f.frameInState > 0) {
+            transition(f, cfg, TopState.Knockdown, 'getup');
+        }
+    },
+    exit() {},
+};
+
+const knockdownGetup: StateHandler = {
+    enter(f) { f.velX = 0; },
+    update(f, _bits, cfg) {
+        // Getup takes 30 frames
+        if (f.frameInState >= 30) {
+            transition(f, cfg, TopState.Grounded, 'idle');
         }
     },
     exit() {},
@@ -136,8 +242,14 @@ const stateMap: Record<string, StateHandler> = {
     'grounded/walkForward': walkForward,
     'grounded/walkBackward': walkBackward,
     'grounded/crouch': crouch,
+    'grounded/attack': attack,
+    'grounded/block': block,
     'airborne/jump': jump,
     'airborne/fall': fall,
+    'hitstun/standing': hitstunStanding,
+    'blockstun/standing': blockstunStanding,
+    'knockdown/falling': knockdownFalling,
+    'knockdown/getup': knockdownGetup,
 };
 
 // ── Public API ──────────────────────────────────────────────────────
