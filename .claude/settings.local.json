@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://api.search.brave.com/res/v1/web/search?q=colyseus+fighting+game+multiplayer+websocket&count=10\" -H \"Accept: application/json\")",
+      "Bash(curl -s \"https://api.search.brave.com/res/v1/web/search?q=fly.io+free+tier+2025+2026&count=10\" -H \"Accept: application/json\")",
+      "WebSearch",
+      "mcp__github__search_repositories",
+      "WebFetch(domain:itch.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:andrea-jens.medium.com)",
+      "WebFetch(domain:pangaea.neocities.org)",
+      "mcp__context7__query-docs"
+    ]
+  }
+}
