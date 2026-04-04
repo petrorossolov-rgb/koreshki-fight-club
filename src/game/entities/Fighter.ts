@@ -38,7 +38,7 @@ export class Fighter {
     /** Sync visual sprite to authoritative FighterState. */
     syncToState(state: FighterState): void {
         this.sprite.setPosition(state.x, state.y);
-        this.sprite.setFlipX(!state.facingRight);
+        this.sprite.setFlipX(state.facingRight);
 
         const stateKey = `${state.topState}/${state.subState}`;
         const animConfigKey = STATE_TO_ANIM[stateKey] ?? 'idle';
