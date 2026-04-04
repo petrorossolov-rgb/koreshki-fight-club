@@ -17,6 +17,7 @@ try {
 }
 
 const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
+const CORS_ORIGIN = Deno.env.get("CORS_ORIGIN") ?? "*";
 
 // ── Rate limiting ──────────────────────────────────────────────────
 const MAX_MESSAGES_PER_SEC = 120; // 2x of 60Hz input rate
@@ -135,8 +136,19 @@ function handleWebSocket(ws: WebSocket): void {
 
 // ── HTTP server ────────────────────────────────────────────────────
 
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": CORS_ORIGIN,
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 Deno.serve({ port: PORT }, (req: Request): Response => {
   const url = new URL(req.url);
+
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
   if (url.pathname === "/ws") {
     const upgrade = req.headers.get("upgrade") ?? "";
@@ -150,10 +162,10 @@ Deno.serve({ port: PORT }, (req: Request): Response => {
 
   // Health check
   if (url.pathname === "/health") {
-    return new Response("OK", { status: 200 });
+    return new Response("OK", { status: 200, headers: corsHeaders });
   }
 
-  return new Response("Not Found", { status: 404 });
+  return new Response("Not Found", { status: 404, headers: corsHeaders });
 });
 
 console.log(`[server] listening on port ${PORT}`);
