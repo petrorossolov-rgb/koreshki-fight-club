@@ -1,4 +1,5 @@
 import type { ClientMsg, ServerMsg } from "@shared/types.ts";
+import { createRoom, joinRoom, setReady, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
 
 const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
 
@@ -87,16 +88,28 @@ function handleWebSocket(ws: WebSocket): void {
 
     switch (msg.type) {
       case "create_room":
-      case "join_room":
-      case "ready":
-      case "input":
-        // Handled by RoomManager (T25) and GameRoom (T26)
+        createRoom(ws);
         break;
+      case "join_room":
+        joinRoom(ws, msg.code);
+        break;
+      case "ready":
+        setReady(ws);
+        break;
+      case "input": {
+        const entry = getPlayerRoom(ws);
+        if (entry) {
+          // Forward to GameRoom (T26)
+          entry.room.onInput?.(entry.index, msg.bits);
+        }
+        break;
+      }
     }
   });
 
   ws.addEventListener("close", () => {
     rateLimits.delete(ws);
+    handleDisconnect(ws);
     console.log("[ws] client disconnected");
   });
 
