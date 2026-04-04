@@ -140,3 +140,21 @@
 - **Files changed**: `src/game/scenes/GameOver.ts`, `src/game/scenes/FightScene.ts`
 - **Learnings**: Scene data passed via `this.scene.start('GameOver', { winner })` and received in `create(data)`.
 - **Patterns**: Reusable `createButton()` helper for interactive rectangles with hover states. Full loop: MainMenu→FightScene→GameOver→rematch/menu.
+
+## [2026-04-04] — [T21] Install nipplejs + create TouchControls
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/TouchControls.ts` (new), `package.json`
+- **Learnings**: nipplejs v1 types use `InternalEvent<JoystickEventData>` — data is in `evt.data`, not a second callback parameter. `Collection` type not directly exported, use `ReturnType<typeof nipplejs.create>`.
+- **Patterns**: Touch controls as DOM overlay (pointer-events:none container with pointer-events:auto children). Button touchstart/touchend with preventDefault for responsive feel.
+
+## [2026-04-04] — [T22] Update InputManager for abstract input source
+- **Status**: ✅ Done
+- **Files changed**: `src/game/systems/InputManager.ts`
+- **Learnings**: InputSource interface is minimal: just `readBits(): number` + optional `destroy()`. Auto-detect via `isTouchDevice()` helper.
+- **Patterns**: `InputSource` interface allows runtime source swapping via `setSource(playerIndex, source)`. NetworkSource stub ready for online mode.
+
+## [2026-04-04] — [T23] Mobile config: fullscreen, orientation, scale
+- **Status**: ✅ Done
+- **Files changed**: `src/game/main.ts`, `src/game/scenes/MainMenu.ts`, `public/style.css`, `index.html`
+- **Learnings**: `screen.orientation.lock()` not in standard TS DOM types — needs type assertion. Portrait warning via CSS `@media (orientation: portrait) and (hover: none)` avoids JS.
+- **Patterns**: Scale FIT + CENTER_BOTH for responsive canvas. activePointers:3 for multitouch. Fullscreen button only on touch devices.
