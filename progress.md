@@ -122,3 +122,21 @@
 - **Files changed**: `src/shared/FightEngine.ts`, `src/shared/constants.ts`, `src/shared/__tests__/FightEngine.test.ts`
 - **Learnings**: phaseFrames must increment BEFORE phase switch (1-indexed) to avoid off-by-one in timer/phase transition checks. RoundEnd is a transient phase — processed immediately in one step.
 - **Patterns**: `setPhase()` resets phaseFrames to 0 on transition. `resetFightersForRound()` preserves roundWins. Round phases: Intro(60f)→Fight→KO(120f)→RoundEnd→MatchEnd.
+
+## [2026-04-04] — [T18] Create HealthBar.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/HealthBar.ts` (new), `src/game/scenes/FightScene.ts`
+- **Learnings**: Bar origin positioning differs per player — P1 anchors left edge, P2 anchors right edge for correct drain direction.
+- **Patterns**: Lerp-based smooth drain (0.08 speed) for game feel. Color shift at 50% and 25% HP thresholds.
+
+## [2026-04-04] — [T19] Create RoundDisplay.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/RoundDisplay.ts` (new), `src/game/scenes/FightScene.ts`
+- **Learnings**: Phase change detection via `lastPhase` tracking avoids repeated tween triggers.
+- **Patterns**: Announcements use Back.easeOut scale tween for punchy feel. Round dots positioned symmetrically around center.
+
+## [2026-04-04] — [T20] Update GameOver scene + complete local loop
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/GameOver.ts`, `src/game/scenes/FightScene.ts`
+- **Learnings**: Scene data passed via `this.scene.start('GameOver', { winner })` and received in `create(data)`.
+- **Patterns**: Reusable `createButton()` helper for interactive rectangles with hover states. Full loop: MainMenu→FightScene→GameOver→rematch/menu.
