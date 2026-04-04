@@ -16,6 +16,8 @@
 - **Resolve aliases (3 places)**: `tsconfig.json` (paths), `vitest.config.ts` (resolve.alias), `vite/config.*.mjs` (resolve.alias) — all must stay in sync
 - **Server imports**: `sendMsg` lives in `server/utils.ts` (not main.ts) to avoid side-effect imports. Server code uses `.ts` extensions in imports (Deno convention).
 - **Room callbacks**: Room has `onDestroy`, `onInput`, `onFightStart` callbacks — keeps RoomManager decoupled from GameRoom
+- **NetworkClient ownership**: MainMenu creates NetworkClient, transfers it to FightScene on fight_start (nulls its own ref). FightScene cleans up callbacks on exit.
+- **Vite env vars**: `import.meta.env.VITE_WS_URL` — typed via `vite/client`, set via `.env` file or `VITE_WS_URL=... npm run build`
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -190,3 +192,21 @@
 - **Files changed**: `server/__tests__/RoomManager.test.ts` (new), `server/__tests__/GameRoom.test.ts` (new), `server/utils.ts` (new)
 - **Learnings**: Server modules with side effects (Deno.serve) can't be imported in tests — extracted sendMsg to utils.ts to break dependency.
 - **Patterns**: Mock WebSocket with sentMessages array for assertion. Deno test requires `https://deno.land/std` imports for assert.
+
+## [2026-04-04] — [T27] Create NetworkClient.ts
+- **Status**: ✅ Done
+- **Files changed**: `src/game/net/NetworkClient.ts` (new)
+- **Learnings**: Connection state machine (Disconnected→Connecting→Connected→InRoom→InFight) keeps UI logic clean. Callbacks pattern avoids tight coupling.
+- **Patterns**: NetworkClient uses callbacks object for event dispatch — FightScene and MainMenu set different callbacks for their lifecycle.
+
+## [2026-04-04] — [T28] Update FightScene for online mode
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts`, `src/game/scenes/GameOver.ts`
+- **Learnings**: Server state overwrites local engine state entirely (no interpolation yet). `remoteState` buffered in update() to avoid mid-frame mutations from async callbacks.
+- **Patterns**: FightSceneData interface passed via `init()` method. Online mode sets remote player's InputSource to NetworkSource. GameOver hides REMATCH in online mode.
+
+## [2026-04-04] — [T29] Update MainMenu for LOCAL/ONLINE flow
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`
+- **Learnings**: View-based UI (main/online/create/join/waiting) with clearUI() works well for Phaser menu screens. `import.meta.env.VITE_WS_URL` works out of the box with vite/client types.
+- **Patterns**: `connectAndDo()` pattern: connect first, then run action on 'connected' state. NetworkClient ownership transfers from MainMenu to FightScene (MainMenu nulls its ref).
