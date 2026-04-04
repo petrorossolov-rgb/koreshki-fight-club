@@ -1,18 +1,15 @@
 import { Scene } from 'phaser';
 import type { CharacterConfig } from '@shared/types';
-import { InputBit } from '@shared/types';
 import { FIXED_DT } from '@shared/constants';
 import { createFightEngine, type FightEngine } from '@shared/FightEngine';
 import { Fighter } from '@game/entities/Fighter';
+import { InputManager } from '@game/systems/InputManager';
 
 export class FightScene extends Scene {
     private engine!: FightEngine;
     private fighters!: [Fighter, Fighter];
+    private inputManager!: InputManager;
     private accumulator = 0;
-    private keyW!: Phaser.Input.Keyboard.Key;
-    private keyA!: Phaser.Input.Keyboard.Key;
-    private keyS!: Phaser.Input.Keyboard.Key;
-    private keyD!: Phaser.Input.Keyboard.Key;
 
     constructor() {
         super('FightScene');
@@ -39,12 +36,7 @@ export class FightScene extends Scene {
         this.fighters[0].syncToState(this.engine.state.fighters[0]);
         this.fighters[1].syncToState(this.engine.state.fighters[1]);
 
-        // Temporary inline keyboard (P1: WASD)
-        this.keyW = this.input.keyboard!.addKey('W');
-        this.keyA = this.input.keyboard!.addKey('A');
-        this.keyS = this.input.keyboard!.addKey('S');
-        this.keyD = this.input.keyboard!.addKey('D');
-
+        this.inputManager = new InputManager(this);
         this.accumulator = 0;
     }
 
@@ -52,22 +44,15 @@ export class FightScene extends Scene {
         this.accumulator += delta;
 
         while (this.accumulator >= FIXED_DT) {
-            const p1Bits = this.readP1Input();
-            this.engine.step([p1Bits, 0]);
+            const p1 = this.inputManager.readInput(0);
+            const p2 = this.inputManager.readInput(1);
+            this.engine.step([p1.bits, p2.bits]);
+            this.inputManager.tick();
             this.accumulator -= FIXED_DT;
         }
 
         // Sync visuals to authoritative state
         this.fighters[0].syncToState(this.engine.state.fighters[0]);
         this.fighters[1].syncToState(this.engine.state.fighters[1]);
-    }
-
-    private readP1Input(): number {
-        let bits = 0;
-        if (this.keyA.isDown) bits |= InputBit.LEFT;
-        if (this.keyD.isDown) bits |= InputBit.RIGHT;
-        if (this.keyW.isDown) bits |= InputBit.UP;
-        if (this.keyS.isDown) bits |= InputBit.DOWN;
-        return bits;
     }
 }
