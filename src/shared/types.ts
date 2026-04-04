@@ -82,6 +82,12 @@ export interface CharacterConfig {
     walkSpeed: number;
     jumpVelY: number;     // negative (upward)
     weight: number;       // knockback multiplier (higher = less knockback)
+    description: string;       // humorous one-liner for select screen
+    nickname: string;          // in-game title ("Long guy", "Bigi")
+    scale: number;             // visual sprite scale (0.85–1.25)
+    tint: number;              // hex color tint (0xFFFFFF = no tint)
+    portraitFrame: number;     // frame index for preview in select grid
+    maxHp: number;             // per-character HP (replaces DEFAULT_HP usage)
 }
 
 // ── Fighter State (per-frame mutable state) ──────────────────────────
@@ -127,13 +133,15 @@ export type ClientMsg =
     | { type: 'create_room' }
     | { type: 'join_room'; code: string }
     | { type: 'ready' }
-    | { type: 'input'; frame: number; bits: number };
+    | { type: 'input'; frame: number; bits: number }
+    | { type: 'select_character'; characterId: string };
 
 export type ServerMsg =
     | { type: 'room_created'; code: string }
     | { type: 'room_joined'; playerIndex: 0 | 1 }
     | { type: 'opponent_joined' }
-    | { type: 'fight_start'; playerIndex: 0 | 1 }
+    | { type: 'fight_start'; playerIndex: 0 | 1; p1CharId: string; p2CharId: string }
+    | { type: 'opponent_selected' }
     | { type: 'state_update'; state: GameState; frame: number }
     | { type: 'opponent_disconnected' }
     | { type: 'error'; message: string };

@@ -87,8 +87,8 @@ export function setReady(ws: WebSocket): void {
   if (room.ready[0] && room.ready[1] && !room.started) {
     room.started = true;
     console.log(`[room] ${room.code}: fight starting`);
-    if (room.players[0]) sendMsg(room.players[0], { type: "fight_start", playerIndex: 0 });
-    if (room.players[1]) sendMsg(room.players[1], { type: "fight_start", playerIndex: 1 });
+    if (room.players[0]) sendMsg(room.players[0], { type: "fight_start", playerIndex: 0, p1CharId: "default", p2CharId: "default" });
+    if (room.players[1]) sendMsg(room.players[1], { type: "fight_start", playerIndex: 1, p1CharId: "default", p2CharId: "default" });
     room.onFightStart?.(room);
   }
 }

@@ -85,8 +85,9 @@ describe('Type compatibility (compile-time checks)', () => {
             { type: 'join_room', code: 'ABCD' },
             { type: 'ready' },
             { type: 'input', frame: 1, bits: InputBit.LEFT | InputBit.PUNCH },
+            { type: 'select_character', characterId: 'petyaj' },
         ];
-        expect(msgs).toHaveLength(4);
+        expect(msgs).toHaveLength(5);
     });
 
     it('ServerMsg discriminated union', () => {
@@ -94,11 +95,12 @@ describe('Type compatibility (compile-time checks)', () => {
             { type: 'room_created', code: 'XYZW' },
             { type: 'room_joined', playerIndex: 0 },
             { type: 'opponent_joined' },
-            { type: 'fight_start', playerIndex: 1 },
+            { type: 'fight_start', playerIndex: 1, p1CharId: 'petyaj', p2CharId: 'denis' },
+            { type: 'opponent_selected' },
             { type: 'state_update', state: {} as GameState, frame: 10 },
             { type: 'opponent_disconnected' },
             { type: 'error', message: 'room not found' },
         ];
-        expect(msgs).toHaveLength(7);
+        expect(msgs).toHaveLength(8);
     });
 });

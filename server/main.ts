@@ -42,7 +42,7 @@ function isRateLimited(ws: WebSocket): boolean {
 
 // ── Message validation ─────────────────────────────────────────────
 
-const VALID_TYPES = new Set(["create_room", "join_room", "ready", "input"]);
+const VALID_TYPES = new Set(["create_room", "join_room", "ready", "input", "select_character"]);
 
 function validateMessage(data: unknown): ClientMsg | null {
   if (typeof data !== "object" || data === null) return null;
@@ -63,6 +63,9 @@ function validateMessage(data: unknown): ClientMsg | null {
       if (obj.bits < 0 || obj.bits > 255 || !Number.isInteger(obj.bits)) return null;
       if (!Number.isInteger(obj.frame) || obj.frame < 0) return null;
       return { type: "input", frame: obj.frame, bits: obj.bits };
+    case "select_character":
+      if (typeof obj.characterId !== "string" || obj.characterId.length === 0) return null;
+      return { type: "select_character", characterId: obj.characterId };
     default:
       return null;
   }
