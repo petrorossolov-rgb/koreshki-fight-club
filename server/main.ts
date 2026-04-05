@@ -15,6 +15,7 @@ const defaultConfig = getDefaultConfig();
 
 const PORT = parseInt(Deno.env.get("PORT") ?? "8000", 10);
 const CORS_ORIGIN = Deno.env.get("CORS_ORIGIN") ?? "*";
+const CLIENT_URL = Deno.env.get("CLIENT_URL") ?? "http://localhost:5173";
 
 // ── Rate limiting ──────────────────────────────────────────────────
 const MAX_MESSAGES_PER_SEC = 120; // 2x of 60Hz input rate
@@ -153,12 +154,24 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-Deno.serve({ port: PORT }, (req: Request): Response => {
+export function handleRequest(req: Request): Response {
   const url = new URL(req.url);
 
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // /join?code=ABCD → redirect to client with room code
+  if (url.pathname === "/join") {
+    const code = url.searchParams.get("code");
+    if (!code) {
+      return new Response("Missing 'code' query parameter", { status: 400, headers: corsHeaders });
+    }
+    return new Response(null, {
+      status: 302,
+      headers: { ...corsHeaders, Location: `${CLIENT_URL}?room=${code.toUpperCase()}` },
+    });
   }
 
   if (url.pathname === "/ws") {
@@ -177,8 +190,10 @@ Deno.serve({ port: PORT }, (req: Request): Response => {
   }
 
   return new Response("Not Found", { status: 404, headers: corsHeaders });
-});
+}
+
+Deno.serve({ port: PORT }, handleRequest);
 
 console.log(`[server] listening on port ${PORT}`);
 
-export { handleWebSocket, validateMessage, isRateLimited };
+export { handleWebSocket, validateMessage, isRateLimited, CLIENT_URL };
