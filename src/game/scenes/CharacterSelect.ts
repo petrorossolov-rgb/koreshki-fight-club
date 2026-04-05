@@ -1,6 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import type { CharacterConfig } from '@shared/types';
 import type { NetworkClient } from '@game/net/NetworkClient';
+import type { SoundManager } from '@game/systems/SoundManager';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -8,6 +9,7 @@ export interface CharSelectData {
     mode: 'local' | 'online';
     networkClient?: NetworkClient;
     playerIndex?: 0 | 1;
+    soundManager?: SoundManager;
 }
 
 interface ManifestEntry {
@@ -492,6 +494,7 @@ export class CharacterSelect extends Scene {
             playerIndex,
             p1Config,
             p2Config,
+            soundManager: this.data_.soundManager,
         });
     }
 
@@ -547,6 +550,7 @@ export class CharacterSelect extends Scene {
             mode: 'local',
             p1Config,
             p2Config,
+            soundManager: this.data_.soundManager,
         });
     }
 

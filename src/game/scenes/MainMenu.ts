@@ -1,6 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import { isTouchDevice } from '@game/ui/TouchControls';
 import { NetworkClient, NetState } from '@game/net/NetworkClient';
+import { SoundManager } from '@game/systems/SoundManager';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000/ws';
 
@@ -13,12 +14,16 @@ export class MainMenu extends Scene {
     private statusText!: GameObjects.Text;
     private codeInput = '';
     private domInput: HTMLInputElement | null = null;
+    soundManager!: SoundManager;
 
     constructor() {
         super('MainMenu');
     }
 
     create(): void {
+        this.soundManager = new SoundManager(this);
+        this.soundManager.playMusic('bgm_menu');
+
         this.add.image(512, 288, 'background');
         this.add.image(512, 140, 'logo');
 
@@ -60,7 +65,8 @@ export class MainMenu extends Scene {
         this.clearUI();
 
         this.addButton(512, 280, 'LOCAL', () => {
-            this.scene.start('CharacterSelect', { mode: 'local' });
+            this.soundManager.stopMusic();
+            this.scene.start('CharacterSelect', { mode: 'local', soundManager: this.soundManager });
         });
 
         this.addButton(512, 350, 'ONLINE', () => {
@@ -251,10 +257,12 @@ export class MainMenu extends Scene {
             this.net.callbacks.onError = undefined;
         }
 
+        this.soundManager.stopMusic();
         this.scene.start('CharacterSelect', {
             mode: 'online',
             networkClient: this.net,
             playerIndex,
+            soundManager: this.soundManager,
         });
         this.net = null;
     }

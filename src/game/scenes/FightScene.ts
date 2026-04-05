@@ -11,6 +11,7 @@ import { HitSpark } from '@game/ui/HitSpark';
 import { ComboCounter } from '@game/ui/ComboCounter';
 import { CooldownIndicator } from '@game/ui/CooldownIndicator';
 import { NetworkClient } from '@game/net/NetworkClient';
+import type { SoundManager } from '@game/systems/SoundManager';
 
 export interface FightSceneData {
     mode: 'local' | 'online';
@@ -18,6 +19,7 @@ export interface FightSceneData {
     playerIndex?: 0 | 1;
     p1Config?: CharacterConfig;
     p2Config?: CharacterConfig;
+    soundManager?: SoundManager;
 }
 
 export class FightScene extends Scene {
@@ -35,6 +37,9 @@ export class FightScene extends Scene {
     private p1Config!: CharacterConfig;
     private p2Config!: CharacterConfig;
 
+    // Sound
+    private soundManager: SoundManager | null = null;
+
     // Online mode state
     private mode: 'local' | 'online' = 'local';
     private networkClient: NetworkClient | null = null;
@@ -48,6 +53,7 @@ export class FightScene extends Scene {
 
     init(data?: FightSceneData): void {
         this.mode = data?.mode ?? 'local';
+        this.soundManager = data?.soundManager ?? null;
         this.networkClient = data?.networkClient ?? null;
         this.localPlayerIndex = data?.playerIndex ?? 0;
         this.remoteState = null;
@@ -60,6 +66,11 @@ export class FightScene extends Scene {
 
     create(): void {
         this.cameras.main.setBackgroundColor(0x1a1a2e);
+
+        if (this.soundManager) {
+            this.soundManager.transferTo(this);
+            this.soundManager.playMusic('bgm_fight');
+        }
 
         this.engine = createFightEngine({ p1Config: this.p1Config, p2Config: this.p2Config });
 
@@ -162,6 +173,7 @@ export class FightScene extends Scene {
 
         // Transition to GameOver on match end
         if (roundPhase === RoundPhase.MatchEnd) {
+            this.soundManager?.stopMusic();
             this.cleanupNetwork();
             const winnerIdx = fighters[0].roundWins > fighters[1].roundWins ? 0 : 1;
             const winnerConfig = winnerIdx === 0 ? this.p1Config : this.p2Config;
@@ -223,14 +235,20 @@ export class FightScene extends Scene {
 
     private processEvents(events: GameEvent[]): void {
         const cam = this.cameras.main;
+        const snd = this.soundManager;
         for (const evt of events) {
             switch (evt.type) {
                 case 'hit':
                     cam.shake(100, 0.005);
                     this.hitSpark.emit(evt.x, evt.y);
+                    snd?.play(evt.damage >= 15 ? 'hit_heavy' : 'hit_light');
+                    break;
+                case 'block':
+                    snd?.play('block', 0.6);
                     break;
                 case 'ko':
                     cam.shake(300, 0.02);
+                    snd?.play('ko');
                     if (this.mode === 'local') {
                         this.time.timeScale = 0.3;
                         this.time.delayedCall(1000, () => {
@@ -238,8 +256,12 @@ export class FightScene extends Scene {
                         });
                     }
                     break;
+                case 'round_start':
+                    snd?.play('fight');
+                    break;
                 case 'special_used':
                     cam.shake(200, 0.01);
+                    snd?.play('special');
                     break;
             }
         }

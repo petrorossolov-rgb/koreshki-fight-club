@@ -37,6 +37,20 @@ export class Preloader extends Scene
             frameHeight: 126,
         });
 
+        // Audio assets (reset path first — setPath applies to all subsequent loads)
+        this.load.setPath('assets/audio');
+        this.load.audio('bgm_menu', 'bgm_menu.wav');
+        this.load.audio('bgm_fight', 'bgm_fight.wav');
+        this.load.audio('hit_light', 'hit_light.wav');
+        this.load.audio('hit_heavy', 'hit_heavy.wav');
+        this.load.audio('block', 'block.wav');
+        this.load.audio('ko', 'ko.wav');
+        this.load.audio('fight', 'fight.wav');
+        this.load.audio('special', 'special.wav');
+        this.load.audio('ui_select', 'ui_select.wav');
+        this.load.audio('ui_confirm', 'ui_confirm.wav');
+        this.load.audio('round_start', 'round_start.wav');
+
         this.load.setPath('');
         this.load.json('char_manifest', 'data/characters/manifest.json');
         this.load.json('char_default', 'data/characters/default.json');
