@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import type { CharacterConfig, GameState } from '@shared/types';
+import type { CharacterConfig, GameState, GameEvent } from '@shared/types';
 import { RoundPhase } from '@shared/types';
 import { FIXED_DT } from '@shared/constants';
 import { createFightEngine, type FightEngine } from '@shared/FightEngine';
@@ -107,6 +107,9 @@ export class FightScene extends Scene {
             this.accumulator -= FIXED_DT;
         }
 
+        // Process visual effects from engine events
+        this.processEvents(this.engine.events);
+
         const { fighters, roundPhase, roundTimer, hitStop } = this.engine.state;
 
         // Hit-stop zoom effect
@@ -178,6 +181,23 @@ export class FightScene extends Scene {
         state.currentRound = serverState.currentRound;
         state.phaseFrames = serverState.phaseFrames;
         state.hitStop = serverState.hitStop;
+    }
+
+    private processEvents(events: GameEvent[]): void {
+        const cam = this.cameras.main;
+        for (const evt of events) {
+            switch (evt.type) {
+                case 'hit':
+                    cam.shake(100, 0.005);
+                    break;
+                case 'ko':
+                    cam.shake(300, 0.02);
+                    break;
+                case 'special_used':
+                    cam.shake(200, 0.01);
+                    break;
+            }
+        }
     }
 
     private cleanupNetwork(): void {
