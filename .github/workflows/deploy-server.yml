@@ -1,0 +1,26 @@
+name: Deploy Server to Deno Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/deployctl@v1
+        with:
+          project: koreshki-fight-club
+          entrypoint: server/main.ts
+          include: |
+            server
+            src/shared
+            public/data
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
