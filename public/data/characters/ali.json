@@ -51,15 +51,15 @@
     "punch": {
       "key": "punch",
       "frameStart": 44,
-      "frameEnd": 47,
-      "frameRate": 18,
+      "frameEnd": 48,
+      "frameRate": 20,
       "repeat": 0
     },
     "kick": {
       "key": "kick",
-      "frameStart": 47,
+      "frameStart": 44,
       "frameEnd": 50,
-      "frameRate": 14,
+      "frameRate": 12,
       "repeat": 0
     },
     "special": {
