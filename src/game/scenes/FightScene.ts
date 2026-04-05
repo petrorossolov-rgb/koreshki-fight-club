@@ -182,6 +182,9 @@ export class FightScene extends Scene {
                 mode: this.mode,
                 winnerName: winnerConfig.nickname || winnerConfig.id,
                 winnerTint: winnerConfig.tint,
+                matchStats: this.engine.state.matchStats,
+                p1Config: this.p1Config,
+                p2Config: this.p2Config,
             });
         }
     }
