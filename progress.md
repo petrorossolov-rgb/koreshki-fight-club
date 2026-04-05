@@ -566,3 +566,10 @@
 - **Files changed**: `docs/deploy.md`, `docs/testing-checklist.md`
 - **Learnings**: `CLIENT_URL` env var needed for `/join/:code` invite redirect on server. GitHub Actions deploy triggers automatically on push to main.
 - **Patterns**: none
+
+## [2026-04-05] — INCIDENT: Same animation for all attacks + silent audio
+- **Symptom**: Punch and Kick show identical animation; no sound effects during combat
+- **Root cause**: (1) `Fighter.syncToState` mapped all attacks to generic "attack" animation, ignoring `currentMove`. Spritesheet has only 1 attack row (frames 44-50). (2) All 11 WAV files were 3244-byte silence placeholders (zero data).
+- **Fix**: (1) Added punch/kick/special animation entries using different frame subsets (punch: 44-47 fast, kick: 47-50, special: 44-50 slow). Updated `syncToState` to check `currentMove`. Regenerated 18 configs. (2) Created `scripts/gen-audio.mjs` for procedural WAV generation. Replaced all 11 files.
+- **Prevention**: Config validation should check move keys have matching animations. Audio tests should verify WAV file sizes.
+- **Time to resolve**: 1 diagnosis + 1 fix cycle

@@ -65,6 +65,8 @@ npm test             # vitest run (single pass)
 npm run test:watch   # vitest in watch mode
 deno run --allow-net --allow-read --allow-env --config server/deno.json server/main.ts  # start game server
 cd server && deno test --allow-read --config deno.json  # run server tests
+node scripts/gen-characters.mjs  # regenerate 17 character JSON configs
+node scripts/gen-audio.mjs       # regenerate procedural WAV sound effects
 ```
 
 ## Phases
