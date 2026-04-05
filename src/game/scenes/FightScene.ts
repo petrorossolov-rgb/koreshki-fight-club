@@ -7,6 +7,7 @@ import { Fighter } from '@game/entities/Fighter';
 import { InputManager, NetworkSource } from '@game/systems/InputManager';
 import { HealthBar } from '@game/ui/HealthBar';
 import { RoundDisplay } from '@game/ui/RoundDisplay';
+import { HitSpark } from '@game/ui/HitSpark';
 import { NetworkClient } from '@game/net/NetworkClient';
 
 export interface FightSceneData {
@@ -23,6 +24,7 @@ export class FightScene extends Scene {
     private inputManager!: InputManager;
     private healthBars!: [HealthBar, HealthBar];
     private roundDisplay!: RoundDisplay;
+    private hitSpark!: HitSpark;
     private accumulator = 0;
 
     // Config state
@@ -79,6 +81,7 @@ export class FightScene extends Scene {
             new HealthBar(this, 1, this.p2Config.maxHp),
         ];
         this.roundDisplay = new RoundDisplay(this);
+        this.hitSpark = new HitSpark(this);
 
         this.accumulator = 0;
     }
@@ -189,6 +192,7 @@ export class FightScene extends Scene {
             switch (evt.type) {
                 case 'hit':
                     cam.shake(100, 0.005);
+                    this.hitSpark.emit(evt.x, evt.y);
                     break;
                 case 'ko':
                     cam.shake(300, 0.02);
