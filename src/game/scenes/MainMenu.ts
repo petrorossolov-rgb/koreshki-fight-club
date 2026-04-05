@@ -109,9 +109,11 @@ export class MainMenu extends Scene {
 
         this.addLabel(512, 260, 'ROOM CODE:', '24px');
         this.addLabel(512, 310, code, '56px', '#ffcc00');
-        this.addLabel(512, 370, 'Waiting for opponent...', '20px', '#aaaaaa');
+        this.addLabel(512, 360, 'Waiting for opponent...', '20px', '#aaaaaa');
 
-        this.addButton(512, 440, 'CANCEL', () => {
+        this.addCopyLinkButton(512, 410, code);
+
+        this.addButton(512, 480, 'CANCEL', () => {
             this.disconnectNet();
             this.showOnlineView();
         });
@@ -303,6 +305,38 @@ export class MainMenu extends Scene {
         bg.on('pointerdown', () => {
             this.soundManager.play('ui_select');
             onClick();
+        });
+
+        this.uiContainer.add([bg, text]);
+    }
+
+    private addCopyLinkButton(x: number, y: number, code: string): void {
+        const url = `${window.location.origin}${window.location.pathname}?room=${code}`;
+        const label = 'COPY LINK';
+
+        const bg = this.add.rectangle(x, y, 220, 40, 0x225522)
+            .setStrokeStyle(2, 0x66ff66)
+            .setInteractive({ useHandCursor: true });
+
+        const text = this.add.text(x, y, label, {
+            fontFamily: 'Arial Black', fontSize: '20px', color: '#66ff66',
+        }).setOrigin(0.5);
+
+        bg.on('pointerover', () => { bg.fillColor = 0x337733; });
+        bg.on('pointerout', () => { bg.fillColor = 0x225522; });
+        bg.on('pointerdown', () => {
+            this.soundManager.play('ui_select');
+            navigator.clipboard.writeText(url).then(() => {
+                text.setText('COPIED!');
+                this.time.delayedCall(2000, () => {
+                    if (text.active) text.setText(label);
+                });
+            }).catch(() => {
+                text.setText('COPY FAILED');
+                this.time.delayedCall(2000, () => {
+                    if (text.active) text.setText(label);
+                });
+            });
         });
 
         this.uiContainer.add([bg, text]);
