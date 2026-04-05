@@ -387,6 +387,178 @@ describe('FightEngine', () => {
         });
     });
 
+    describe('GameEvent emission + combo tracking (T03)', () => {
+        function setupCloseRangeForCombo() {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300;
+            f2.x = 360;
+            f1.facingRight = true;
+            f2.facingRight = false;
+            return engine;
+        }
+
+        it('hit generates hit event with correct data', () => {
+            const engine = setupCloseRangeForCombo();
+            const [f1, f2] = engine.state.fighters;
+
+            engine.step([InputBit.PUNCH, 0]); // enter attack
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            const hitEvents = engine.events.filter(e => e.type === 'hit');
+            expect(hitEvents).toHaveLength(1);
+            const evt = hitEvents[0] as { type: 'hit'; attackerIdx: number; damage: number; moveKey: string; x: number; y: number };
+            expect(evt.attackerIdx).toBe(0);
+            expect(evt.damage).toBe(80);
+            expect(evt.moveKey).toBe('punch');
+            expect(evt.x).toBe((f1.x + f2.x) / 2);
+        });
+
+        it('block generates block event', () => {
+            const engine = setupCloseRangeForCombo();
+
+            engine.step([InputBit.PUNCH, InputBit.RIGHT]); // P2 faces left, RIGHT = back
+            engine.step([0, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]); // blocked
+
+            const blockEvents = engine.events.filter(e => e.type === 'block');
+            expect(blockEvents).toHaveLength(1);
+        });
+
+        it('KO generates ko event', () => {
+            const engine = setupCloseRangeForCombo();
+            engine.state.fighters[1].hp = 1;
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects, KO
+
+            const koEvents = engine.events.filter(e => e.type === 'ko');
+            expect(koEvents).toHaveLength(1);
+            expect((koEvents[0] as { type: 'ko'; loserIdx: number }).loserIdx).toBe(1);
+        });
+
+        it('matchStats accumulates hits and damage', () => {
+            const engine = setupCloseRangeForCombo();
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            expect(engine.state.matchStats.hits[0]).toBe(1);
+            expect(engine.state.matchStats.damage[0]).toBe(80);
+        });
+
+        it('comboCount increments on hit', () => {
+            const engine = setupCloseRangeForCombo();
+            const f1 = engine.state.fighters[0];
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            expect(f1.comboCount).toBe(1);
+            expect(f1.comboDamage).toBe(80);
+        });
+
+        it('comboCount resets when opponent exits hitstun', () => {
+            const engine = setupCloseRangeForCombo();
+            const [f1, f2] = engine.state.fighters;
+
+            // Land a hit
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+            expect(f1.comboCount).toBe(1);
+
+            // Wait for hitstun to end + hitstop
+            for (let i = 0; i < 50; i++) {
+                engine.step([0, 0]);
+            }
+
+            // Opponent should be out of hitstun by now
+            expect(f2.topState).not.toBe(TopState.Hitstun);
+            expect(f1.comboCount).toBe(0);
+        });
+
+        it('specialCooldown decrements each frame', () => {
+            const engine = makeEngine();
+            engine.state.fighters[0].specialCooldown = 5;
+
+            engine.step([0, 0]);
+            expect(engine.state.fighters[0].specialCooldown).toBe(4);
+
+            engine.step([0, 0]);
+            expect(engine.state.fighters[0].specialCooldown).toBe(3);
+        });
+
+        it('specialCooldown does not go below 0', () => {
+            const engine = makeEngine();
+            engine.state.fighters[0].specialCooldown = 1;
+
+            engine.step([0, 0]);
+            expect(engine.state.fighters[0].specialCooldown).toBe(0);
+
+            engine.step([0, 0]);
+            expect(engine.state.fighters[0].specialCooldown).toBe(0);
+        });
+
+        it('events cleared at start of each step', () => {
+            const engine = setupCloseRangeForCombo();
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit → events populated
+            expect(engine.events.length).toBeGreaterThan(0);
+
+            engine.step([0, 0]); // next step clears
+            // During hitstop, events should be cleared
+            expect(engine.events).toHaveLength(0);
+        });
+
+        it('maxCombo tracks highest combo per player', () => {
+            const engine = setupCloseRangeForCombo();
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit
+
+            expect(engine.state.matchStats.maxCombo[0]).toBe(1);
+        });
+
+        it('round_start event emitted when fight begins', () => {
+            const engine = createFightEngine({ p1Config: testConfig, p2Config: testConfig });
+            // Advance through intro — transition fires when phaseFrames >= INTRO_FRAMES
+            let found = false;
+            for (let i = 0; i < INTRO_FRAMES + 5; i++) {
+                engine.step([0, 0]);
+                const rs = engine.events.filter(e => e.type === 'round_start');
+                if (rs.length > 0) {
+                    expect((rs[0] as { type: 'round_start'; round: number }).round).toBe(1);
+                    found = true;
+                    break;
+                }
+            }
+            expect(found).toBe(true);
+            expect(engine.state.roundPhase).toBe(RoundPhase.Fight);
+        });
+
+        it('match_end event emitted when match ends', () => {
+            const engine = makeEngine();
+            const [f1] = engine.state.fighters;
+            f1.roundWins = ROUNDS_TO_WIN;
+            engine.state.roundPhase = RoundPhase.RoundEnd;
+            engine.state.phaseFrames = 0;
+
+            engine.step([0, 0]); // RoundEnd → MatchEnd
+
+            const matchEndEvents = engine.events.filter(e => e.type === 'match_end');
+            expect(matchEndEvents).toHaveLength(1);
+            expect((matchEndEvents[0] as { type: 'match_end'; winnerIdx: number }).winnerIdx).toBe(0);
+        });
+    });
+
     describe('round management (T17)', () => {
         it('starts in Intro phase, transitions to Fight after INTRO_FRAMES', () => {
             const engine = createFightEngine({ p1Config: testConfig, p2Config: testConfig });

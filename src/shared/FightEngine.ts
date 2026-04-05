@@ -1,5 +1,5 @@
 import { TopState, RoundPhase, InputBit } from './types';
-import type { FighterState, GameState, CharacterConfig, HitResult } from './types';
+import type { FighterState, GameState, CharacterConfig, HitResult, GameEvent } from './types';
 import { STAGE_WIDTH, FLOOR_Y, DEFAULT_HP, HIT_STOP_FRAMES, ROUND_TIME, ROUNDS_TO_WIN, INTRO_FRAMES, KO_FRAMES } from './constants';
 import { applyGravity, applyVelocity, clampToStage, resolvePushboxes } from './PhysicsSystem';
 import { tickFSM, transition } from './FighterFSM';
@@ -14,6 +14,7 @@ export interface FightEngineConfig {
 
 export interface FightEngine {
     state: GameState;
+    events: GameEvent[];
     step(inputs: [number, number]): void;
 }
 
@@ -95,14 +96,19 @@ function isBlocking(defender: FighterState, defenderBits: number): boolean {
 
 function applyHit(
     attacker: FighterState,
+    attackerIdx: number,
     attackerCfg: CharacterConfig,
     defender: FighterState,
+    defenderIdx: number,
     defenderCfg: CharacterConfig,
     hit: HitResult,
     state: GameState,
     blocked: boolean,
+    events: GameEvent[],
 ): void {
     attacker.hitConfirmed = true;
+    const hitX = (attacker.x + defender.x) / 2;
+    const hitY = (attacker.y + defender.y) / 2;
 
     if (blocked) {
         // Block: no damage, blockstun, reduced knockback
@@ -111,6 +117,7 @@ function applyHit(
         transition(defender, defenderCfg, TopState.Blockstun, 'standing');
         defender.velX = (hit.knockbackX * 0.5) / defenderCfg.weight;
         defender.velY = 0;
+        events.push({ type: 'block', x: hitX, y: hitY });
     } else {
         // Hit: full damage, hitstun, full knockback
         defender.hp = Math.max(0, defender.hp - hit.damage);
@@ -118,6 +125,23 @@ function applyHit(
         transition(defender, defenderCfg, TopState.Hitstun, 'standing');
         defender.velX = hit.knockbackX / defenderCfg.weight;
         defender.velY = hit.knockbackY;
+
+        // Combo tracking
+        attacker.comboCount++;
+        attacker.comboDamage += hit.damage;
+
+        // Match stats
+        state.matchStats.hits[attackerIdx]++;
+        state.matchStats.damage[attackerIdx] += hit.damage;
+        if (attacker.comboCount > state.matchStats.maxCombo[attackerIdx]) {
+            state.matchStats.maxCombo[attackerIdx] = attacker.comboCount;
+        }
+
+        events.push({
+            type: 'hit', attackerIdx, defenderIdx,
+            moveKey: attacker.currentMove!, damage: hit.damage,
+            x: hitX, y: hitY,
+        });
     }
 
     // Global hit-stop
@@ -128,6 +152,7 @@ function processHits(
     state: GameState,
     configs: [CharacterConfig, CharacterConfig],
     inputs: [number, number],
+    events: GameEvent[],
 ): void {
     const [f1, f2] = state.fighters;
 
@@ -136,7 +161,7 @@ function processHits(
         const hit = checkHit(f1, configs[0], f2, configs[1], 0, 1);
         if (hit) {
             const blocked = isBlocking(f2, inputs[1]);
-            applyHit(f1, configs[0], f2, configs[1], hit, state, blocked);
+            applyHit(f1, 0, configs[0], f2, 1, configs[1], hit, state, blocked, events);
         }
     }
 
@@ -145,7 +170,7 @@ function processHits(
         const hit = checkHit(f2, configs[1], f1, configs[0], 1, 0);
         if (hit) {
             const blocked = isBlocking(f1, inputs[0]);
-            applyHit(f2, configs[1], f1, configs[0], hit, state, blocked);
+            applyHit(f2, 1, configs[1], f1, 0, configs[0], hit, state, blocked, events);
         }
     }
 }
@@ -177,6 +202,7 @@ function resetFightersForRound(
 export function createFightEngine(config: FightEngineConfig): FightEngine {
     const configs: [CharacterConfig, CharacterConfig] = [config.p1Config, config.p2Config];
     const state = createInitialGameState(configs);
+    let events: GameEvent[] = [];
 
     function stepFight(inputs: [number, number]): void {
         const [f1, f2] = state.fighters;
@@ -186,42 +212,67 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         tickFSM(f1, bits1, configs[0]);
         tickFSM(f2, bits2, configs[1]);
 
-        // 2. Physics
+        // 2. Decrement special cooldowns
+        if (f1.specialCooldown > 0) f1.specialCooldown--;
+        if (f2.specialCooldown > 0) f2.specialCooldown--;
+
+        // 3. Physics
         applyGravity(f1);
         applyGravity(f2);
         applyVelocity(f1);
         applyVelocity(f2);
 
-        // 3. Stage clamping + landing
+        // 4. Stage clamping + landing
         clampToStage(f1, configs[0].pushbox);
         clampToStage(f2, configs[1].pushbox);
 
-        // 4. Pushbox resolution
+        // 5. Pushbox resolution
         resolvePushboxes(f1, f2, configs[0].pushbox, configs[1].pushbox);
 
-        // 5. Auto-face opponent
+        // 6. Auto-face opponent
         autoFace(f1, f2);
 
-        // 6. Hit detection
-        processHits(state, configs, inputs);
+        // 7. Hit detection
+        processHits(state, configs, inputs, events);
 
-        // 7. Timer countdown (60 frames = 1 second)
+        // 8. Combo reset — when opponent exits hitstun/blockstun
+        if (f1.comboCount > 0
+            && f2.topState !== TopState.Hitstun
+            && f2.topState !== TopState.Blockstun) {
+            f1.comboCount = 0;
+            f1.comboDamage = 0;
+        }
+        if (f2.comboCount > 0
+            && f1.topState !== TopState.Hitstun
+            && f1.topState !== TopState.Blockstun) {
+            f2.comboCount = 0;
+            f2.comboDamage = 0;
+        }
+
+        // 9. Timer countdown (60 frames = 1 second)
         if (state.phaseFrames % 60 === 0) {
             state.roundTimer--;
         }
 
-        // 8. Check KO or timeout
+        // 10. Check KO or timeout
         if (f1.hp <= 0 || f2.hp <= 0) {
+            const loserIdx = f1.hp <= 0 ? 0 : 1;
+            events.push({ type: 'ko', loserIdx });
             setPhase(state, RoundPhase.KO);
             return;
         }
         if (state.roundTimer <= 0) {
+            const loserIdx = f1.hp < f2.hp ? 0 : 1;
+            events.push({ type: 'ko', loserIdx });
             setPhase(state, RoundPhase.KO);
             return;
         }
     }
 
     function step(inputs: [number, number]): void {
+        // Clear events at start of each step
+        events = [];
+
         // Hit-stop freezes everything
         if (state.hitStop > 0) {
             state.hitStop--;
@@ -234,6 +285,7 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
             case RoundPhase.Intro:
                 if (state.phaseFrames >= INTRO_FRAMES) {
                     setPhase(state, RoundPhase.Fight);
+                    events.push({ type: 'round_start', round: state.currentRound });
                 }
                 break;
 
@@ -259,6 +311,8 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
             case RoundPhase.RoundEnd: {
                 const [f1, f2] = state.fighters;
                 if (f1.roundWins >= ROUNDS_TO_WIN || f2.roundWins >= ROUNDS_TO_WIN) {
+                    const winnerIdx = f1.roundWins >= ROUNDS_TO_WIN ? 0 : 1;
+                    events.push({ type: 'match_end', winnerIdx });
                     setPhase(state, RoundPhase.MatchEnd);
                 } else {
                     // Next round
@@ -275,5 +329,9 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         }
     }
 
-    return { state, step };
+    return {
+        state,
+        get events() { return events; },
+        step,
+    };
 }
