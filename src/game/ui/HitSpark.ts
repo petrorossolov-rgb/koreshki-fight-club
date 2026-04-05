@@ -8,7 +8,7 @@ export class HitSpark {
     constructor(scene: Scene) {
         // Create a 4x4 white pixel texture for particles (once)
         if (!scene.textures.exists(PARTICLE_KEY)) {
-            const g = scene.make.graphics({ add: false });
+            const g = scene.make.graphics({ add: false } as Phaser.Types.GameObjects.Graphics.Options);
             g.fillStyle(0xffffff);
             g.fillRect(0, 0, 4, 4);
             g.generateTexture(PARTICLE_KEY, 4, 4);

@@ -11,7 +11,6 @@ const TRAIL_LERP_SPEED = 0.02;
 export class HealthBar {
     private bar: GameObjects.Rectangle;
     private trailBar: GameObjects.Rectangle;
-    private nameText: GameObjects.Text;
     private displayHp: number;
     private trailHp: number;
     private readonly maxHp: number;
@@ -52,7 +51,7 @@ export class HealthBar {
         // Player nickname above bar
         const nameX = playerIndex === 0 ? x : x + BAR_WIDTH;
         const align = playerIndex === 0 ? 'left' : 'right';
-        this.nameText = scene.add.text(nameX, BAR_Y - 4, nickname ?? '', {
+        scene.add.text(nameX, BAR_Y - 4, nickname ?? '', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#ffffff',

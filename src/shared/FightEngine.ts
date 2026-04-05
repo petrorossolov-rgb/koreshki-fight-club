@@ -213,8 +213,18 @@ export function createFightEngine(config: FightEngineConfig): FightEngine {
         const [bits1, bits2] = inputs;
 
         // 1. FSM tick (reads input, sets velocities)
+        const prevCooldown1 = f1.specialCooldown;
+        const prevCooldown2 = f2.specialCooldown;
         tickFSM(f1, bits1, configs[0]);
         tickFSM(f2, bits2, configs[1]);
+
+        // Detect special move activation (cooldown jumped from 0 to >0)
+        if (prevCooldown1 <= 0 && f1.specialCooldown > 0) {
+            events.push({ type: 'special_used', playerIdx: 0 });
+        }
+        if (prevCooldown2 <= 0 && f2.specialCooldown > 0) {
+            events.push({ type: 'special_used', playerIdx: 1 });
+        }
 
         // 2. Decrement special cooldowns
         if (f1.specialCooldown > 0) f1.specialCooldown--;

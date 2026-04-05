@@ -284,6 +284,7 @@ export class FightScene extends Scene {
         state.currentRound = serverState.currentRound;
         state.phaseFrames = serverState.phaseFrames;
         state.hitStop = serverState.hitStop;
+        state.matchStats = serverState.matchStats;
     }
 
     private processEvents(events: GameEvent[]): void {
