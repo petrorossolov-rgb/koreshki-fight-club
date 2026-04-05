@@ -70,6 +70,7 @@ export class FightScene extends Scene {
 
     create(): void {
         this.cameras.main.setBackgroundColor(0x1a1a2e);
+        this.add.image(512, 288, 'background').setDisplaySize(1024, 576);
 
         if (this.soundManager) {
             this.soundManager.transferTo(this);

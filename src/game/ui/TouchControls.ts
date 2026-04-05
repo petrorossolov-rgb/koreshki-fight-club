@@ -100,19 +100,19 @@ export class TouchControls {
                 'user-select:none;-webkit-user-select:none;outline:none;' +
                 'pointer-events:auto;';
 
-            btn.addEventListener('touchstart', (e) => {
+            btn.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
                 this.buttonBits |= def.bit;
                 btn.style.background = 'rgba(255,255,255,0.4)';
             }, { passive: false });
 
-            btn.addEventListener('touchend', (e) => {
+            btn.addEventListener('pointerup', (e) => {
                 e.preventDefault();
                 this.buttonBits &= ~def.bit;
                 btn.style.background = 'rgba(255,255,255,0.15)';
             }, { passive: false });
 
-            btn.addEventListener('touchcancel', () => {
+            btn.addEventListener('pointercancel', () => {
                 this.buttonBits &= ~def.bit;
                 btn.style.background = 'rgba(255,255,255,0.15)';
             });
