@@ -524,3 +524,21 @@
 - **Status**: ✅ Done
 - **Files changed**: `src/game/scenes/MainMenu.ts`
 - **Learnings**: `navigator.clipboard.writeText()` returns a Promise — handle both success and failure. Green-styled button (0x225522/0x66ff66) visually differentiates from regular blue buttons.
+
+## [2026-04-05] — [T29] Server /join redirect route (Phase 3.5)
+- **Status**: ✅ Done
+- **Files changed**: `server/main.ts`, `server/__tests__/joinRoute.test.ts` (new)
+- **Learnings**: Extracted `handleRequest()` from Deno.serve for testability, but main.ts side effects (loadAllConfigs, Deno.serve) prevent direct import in tests. Used replicated logic in isolated test file instead.
+- **Patterns**: CLIENT_URL env var with `http://localhost:5173` fallback.
+
+## [2026-04-05] — [T30] Auto-reconnect: protocol types + server grace timer (Phase 3.5)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/types.ts`, `server/RoomManager.ts`, `server/main.ts`, `server/GameRoom.ts`, `server/__tests__/RoomManager.test.ts`, `server/__tests__/GameRoom.test.ts`
+- **Learnings**: Grace timer only activates for started games (not lobby). Room.onGetState callback lets RoomManager request current engine state from GameRoom without direct coupling.
+- **Patterns**: `disconnectTimers: [number | null, number | null]` on Room. setTimeout for grace period, clearTimeout on rejoin. onGetState callback for cross-module state access.
+
+## [2026-04-05] — [T31] Auto-reconnect: client NetworkClient (Phase 3.5)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/net/NetworkClient.ts`, `src/game/scenes/FightScene.ts`
+- **Learnings**: sessionStorage auto-clears on tab close — perfect for reconnect data that shouldn't persist. cleanup() needs `updateState` param to avoid clearing state during reconnect attempts. Error messages during reconnect mean rejoin failed — should abort reconnect loop.
+- **Patterns**: Reconnect delays [1,2,4,8,8]s. Save {roomCode, playerIndex} to sessionStorage on disconnect. Semi-transparent overlay container at depth 1000 for reconnect UI.
