@@ -559,6 +559,108 @@ describe('FightEngine', () => {
         });
     });
 
+    describe('hitstun scaling / damage proration (T06)', () => {
+        it('first hit deals full damage (comboCount=0)', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+
+            engine.step([InputBit.PUNCH, 0]); // enter attack
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            expect(f2.hp).toBe(DEFAULT_HP - 80); // full 80 damage
+        });
+
+        it('second hit deals 85% damage (comboCount=1 at time of hit)', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+            // Simulate first hit already happened — f2 must be in hitstun to prevent combo reset
+            f1.comboCount = 1;
+            f2.topState = TopState.Hitstun;
+            f2.subState = 'standing';
+            f2.stunDuration = 30; // long stun to survive through startup
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit
+
+            const expected = Math.round(80 * 0.85);
+            expect(f2.hp).toBe(DEFAULT_HP - expected);
+        });
+
+        it('third hit deals 70% damage (comboCount=2)', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+            f1.comboCount = 2;
+            f2.topState = TopState.Hitstun;
+            f2.subState = 'standing';
+            f2.stunDuration = 30;
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]);
+
+            const expected = Math.round(80 * 0.70);
+            expect(f2.hp).toBe(DEFAULT_HP - expected);
+        });
+
+        it('proration floor at 40% damage', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+            f1.comboCount = 10;
+            f2.topState = TopState.Hitstun;
+            f2.subState = 'standing';
+            f2.stunDuration = 30;
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]);
+
+            const expected = Math.round(80 * 0.4);
+            expect(f2.hp).toBe(DEFAULT_HP - expected);
+        });
+
+        it('hitstun scales with floor at 50%', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+            f1.comboCount = 10;
+            f2.topState = TopState.Hitstun;
+            f2.subState = 'standing';
+            f2.stunDuration = 30;
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]);
+
+            // hitStunFrames for punch = 12, floor 50% → 6
+            expect(f2.stunDuration).toBe(Math.round(12 * 0.5));
+        });
+
+        it('block damage unaffected by proration', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+            f1.comboCount = 5; // high combo
+
+            engine.step([InputBit.PUNCH, InputBit.RIGHT]); // P2 blocks
+            engine.step([0, InputBit.RIGHT]);
+            engine.step([0, InputBit.RIGHT]);
+
+            expect(f2.hp).toBe(DEFAULT_HP); // no damage on block regardless of combo
+        });
+    });
+
     describe('round management (T17)', () => {
         it('starts in Intro phase, transitions to Fight after INTRO_FRAMES', () => {
             const engine = createFightEngine({ p1Config: testConfig, p2Config: testConfig });

@@ -113,33 +113,37 @@ function applyHit(
     if (blocked) {
         // Block: no damage, blockstun, reduced knockback
         const move = attackerCfg.moves[attacker.currentMove!];
-        defender.stunDuration = move?.blockStunFrames ?? 8;
         transition(defender, defenderCfg, TopState.Blockstun, 'standing');
+        defender.stunDuration = move?.blockStunFrames ?? 8;
         defender.velX = (hit.knockbackX * 0.5) / defenderCfg.weight;
         defender.velY = 0;
         events.push({ type: 'block', x: hitX, y: hitY });
     } else {
-        // Hit: full damage, hitstun, full knockback
-        defender.hp = Math.max(0, defender.hp - hit.damage);
-        defender.stunDuration = hit.hitStunFrames;
+        // Hit: damage and hitstun scaled by combo proration
+        const proration = Math.max(1.0 - (attacker.comboCount * 0.15), 0.4);
+        const scaledDamage = Math.round(hit.damage * proration);
+        const scaledHitstun = Math.round(hit.hitStunFrames * Math.max(1.0 - (attacker.comboCount * 0.15), 0.5));
+
+        defender.hp = Math.max(0, defender.hp - scaledDamage);
         transition(defender, defenderCfg, TopState.Hitstun, 'standing');
+        defender.stunDuration = scaledHitstun;
         defender.velX = hit.knockbackX / defenderCfg.weight;
         defender.velY = hit.knockbackY;
 
         // Combo tracking
         attacker.comboCount++;
-        attacker.comboDamage += hit.damage;
+        attacker.comboDamage += scaledDamage;
 
         // Match stats
         state.matchStats.hits[attackerIdx]++;
-        state.matchStats.damage[attackerIdx] += hit.damage;
+        state.matchStats.damage[attackerIdx] += scaledDamage;
         if (attacker.comboCount > state.matchStats.maxCombo[attackerIdx]) {
             state.matchStats.maxCombo[attackerIdx] = attacker.comboCount;
         }
 
         events.push({
             type: 'hit', attackerIdx, defenderIdx,
-            moveKey: attacker.currentMove!, damage: hit.damage,
+            moveKey: attacker.currentMove!, damage: scaledDamage,
             x: hitX, y: hitY,
         });
     }
