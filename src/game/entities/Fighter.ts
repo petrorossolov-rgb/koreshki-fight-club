@@ -3,10 +3,10 @@ import type { CharacterConfig, FighterState } from '@shared/types';
 
 const SHARED_TEXTURE = 'martial-hero';
 
-// Bottom padding in the 126×126 sprite frame (pixels from feet to frame edge).
-// All characters share the same spritesheet, so padding is identical.
-// At different scales this padding shifts feet vertically — compensated in syncToState.
-const SPRITE_BOTTOM_PADDING = 25;
+// Origin Y placed at the character's feet within the 126px frame.
+// Feet are at ~96px from top → 96/126 ≈ 0.76.
+// Scaling happens around origin, so feet stay pinned to state.y at any scale.
+const FEET_ORIGIN_Y = 0.76;
 
 /** Map FSM state keys to animation config keys. */
 const STATE_TO_ANIM: Record<string, string> = {
@@ -35,7 +35,7 @@ export class Fighter {
         this.createAnimations(scene);
 
         this.sprite = scene.add.sprite(0, 0, SHARED_TEXTURE);
-        this.sprite.setOrigin(0.5, 1); // bottom-center origin for floor alignment
+        this.sprite.setOrigin(0.5, FEET_ORIGIN_Y);
         this.sprite.setScale(config.scale);
         if (config.tint !== 0xFFFFFF) this.sprite.setTint(config.tint);
     }
@@ -51,7 +51,7 @@ export class Fighter {
 
     /** Sync visual sprite to authoritative FighterState. */
     syncToState(state: FighterState): void {
-        this.sprite.setPosition(state.x, state.y + SPRITE_BOTTOM_PADDING * (this.config.scale - 1));
+        this.sprite.setPosition(state.x, state.y);
         this.sprite.setFlipX(state.facingRight);
 
         const stateKey = `${state.topState}/${state.subState}`;
