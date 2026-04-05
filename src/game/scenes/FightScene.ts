@@ -47,6 +47,10 @@ export class FightScene extends Scene {
     private remoteState: GameState | null = null;
     private remoteEvents: GameEvent[] = [];
 
+    // Reconnect overlay
+    private reconnectOverlay: Phaser.GameObjects.Container | null = null;
+    private reconnectText: Phaser.GameObjects.Text | null = null;
+
     constructor() {
         super('FightScene');
     }
@@ -201,6 +205,52 @@ export class FightScene extends Scene {
             this.cleanupNetwork();
             this.scene.start('MainMenu');
         };
+
+        this.networkClient.callbacks.onOpponentDisconnecting = (graceSeconds: number) => {
+            this.showReconnectOverlay(`Противник отключился...\nОжидание ${graceSeconds}с`);
+        };
+
+        this.networkClient.callbacks.onOpponentReconnected = () => {
+            this.hideReconnectOverlay();
+        };
+
+        this.networkClient.callbacks.onReconnecting = (attempt: number, max: number) => {
+            this.showReconnectOverlay(`Переподключение... (${attempt}/${max})`);
+        };
+
+        this.networkClient.callbacks.onReconnected = () => {
+            this.hideReconnectOverlay();
+        };
+
+        this.networkClient.callbacks.onReconnectFailed = () => {
+            this.hideReconnectOverlay();
+            this.cleanupNetwork();
+            this.scene.start('MainMenu');
+        };
+    }
+
+    private showReconnectOverlay(text: string): void {
+        if (!this.reconnectOverlay) {
+            const { width, height } = this.scale;
+            const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0);
+            this.reconnectText = this.add.text(width / 2, height / 2, text, {
+                fontSize: '24px',
+                color: '#ffffff',
+                align: 'center',
+            }).setOrigin(0.5);
+            this.reconnectOverlay = this.add.container(0, 0, [bg, this.reconnectText]);
+            this.reconnectOverlay.setDepth(1000);
+        } else if (this.reconnectText) {
+            this.reconnectText.setText(text);
+        }
+    }
+
+    private hideReconnectOverlay(): void {
+        if (this.reconnectOverlay) {
+            this.reconnectOverlay.destroy();
+            this.reconnectOverlay = null;
+            this.reconnectText = null;
+        }
     }
 
     private applyServerState(serverState: GameState): void {
@@ -274,6 +324,11 @@ export class FightScene extends Scene {
         if (this.networkClient) {
             this.networkClient.callbacks.onStateUpdate = undefined;
             this.networkClient.callbacks.onOpponentDisconnected = undefined;
+            this.networkClient.callbacks.onOpponentDisconnecting = undefined;
+            this.networkClient.callbacks.onOpponentReconnected = undefined;
+            this.networkClient.callbacks.onReconnecting = undefined;
+            this.networkClient.callbacks.onReconnected = undefined;
+            this.networkClient.callbacks.onReconnectFailed = undefined;
         }
     }
 }
