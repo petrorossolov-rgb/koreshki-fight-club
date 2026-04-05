@@ -226,7 +226,7 @@
   "tint": 65382,
   "portraitFrame": 0,
   "maxHp": 1000,
-  "groundOffset": -10,
+  "groundOffset": 0,
   "chainRoutes": [
     {
       "from": "punch",
