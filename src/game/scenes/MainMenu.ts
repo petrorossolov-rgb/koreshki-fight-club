@@ -373,11 +373,15 @@ export class MainMenu extends Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         btn.on('pointerdown', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
+            const doc = document as Document & { webkitFullscreenElement?: Element };
+            const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?(): Promise<void> };
+            const exitDoc = document as Document & { webkitExitFullscreen?(): Promise<void> };
+
+            if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+                (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.())?.catch(() => {});
                 this.tryLockOrientation();
             } else {
-                document.exitFullscreen().catch(() => {});
+                (exitDoc.exitFullscreen?.() ?? exitDoc.webkitExitFullscreen?.())?.catch(() => {});
             }
         });
     }

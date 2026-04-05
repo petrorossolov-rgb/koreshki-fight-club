@@ -628,6 +628,13 @@
 - **Prevention**: test online mode from both creator and joiner perspectives on mobile
 - **Time to resolve**: 1 attempt
 
+## [2026-04-05] — INCIDENT: iOS Safari — broken scale, fullscreen, and touch controls
+- **Symptom**: iPhone 14 user reports wrong screen scale, invisible FULLSCREEN button, no joystick in local fight
+- **Root cause**: Three iOS Safari issues: (1) `100vh` includes address bar height, cutting off bottom of canvas; (2) Fullscreen API requires `webkit` prefix on iOS; (3) missing `viewport-fit=cover` causes safe-area padding to shrink game area on notch devices
+- **Fix**: added `viewport-fit=cover, user-scalable=no` to viewport meta; CSS `100dvh` fallback for `100vh`; webkit-prefixed fullscreen API calls; safe-area padding on body and touch controls overlay
+- **Prevention**: test on iOS Safari (or BrowserStack) before each deploy; add iOS device to test matrix
+- **Time to resolve**: 1 attempt — 4 files changed
+
 ## [2026-04-05] — SYNC: Documentation synchronized
 - **Documents updated**: CLAUDE.md, progress.md
 - **Drift items found**: 3

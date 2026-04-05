@@ -38,7 +38,8 @@ export class TouchControls {
         this.container = document.createElement('div');
         this.container.id = 'touch-controls';
         this.container.style.cssText =
-            'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;';
+            'position:fixed;inset:0;width:100%;height:100dvh;pointer-events:none;z-index:10;' +
+            'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box;';
         document.body.appendChild(this.container);
     }
 
