@@ -16,7 +16,8 @@
 - **Resolve aliases (3 places)**: `tsconfig.json` (paths), `vitest.config.ts` (resolve.alias), `vite/config.*.mjs` (resolve.alias) — all must stay in sync
 - **Server imports**: `sendMsg` lives in `server/utils.ts` (not main.ts) to avoid side-effect imports. Server code uses `.ts` extensions in imports (Deno convention).
 - **Room callbacks**: Room has `onDestroy`, `onInput`, `onFightStart` callbacks — keeps RoomManager decoupled from GameRoom
-- **NetworkClient ownership**: MainMenu creates NetworkClient, transfers it to FightScene on fight_start (nulls its own ref). FightScene cleans up callbacks on exit.
+- **Server config loading**: `charConfigs.ts` owns the Map<string, CharacterConfig>. Import `getCharConfig`/`getDefaultConfig` — never import `main.ts` directly (side effects)
+- **NetworkClient ownership**: MainMenu creates NetworkClient, transfers to CharacterSelect on room join (nulls its own ref). CharacterSelect transfers to FightScene on fight_start. Each scene clears predecessor's callbacks before transfer.
 - **Vite env vars**: `import.meta.env.VITE_WS_URL` — typed via `vite/client`, set via `.env` file or `VITE_WS_URL=... npm run build`
 - **Sprite orientation**: Martial Hero spritesheet faces LEFT by default. `setFlipX(state.facingRight)` — flip when facing right, default when facing left.
 - **Phaser setPath scope**: `setPath('assets')` applies to ALL subsequent loads. Reset with `setPath('')` before loading assets outside the `assets/` directory.
@@ -244,3 +245,136 @@
 - **Fix**: reset `setPath('')` before loading JSON in `Preloader.ts`
 - **Prevention**: verify all asset paths resolve correctly in production builds
 - **Time to resolve**: 1 phase
+
+## [2026-04-05] — [T01] Extend CharacterConfig & network types (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/types.ts`, `src/shared/__tests__/types.test.ts`, `public/data/characters/default.json`, `server/RoomManager.ts`, `server/main.ts`
+- **Learnings**: Adding required fields to `fight_start` ServerMsg breaks server code that sends it — had to update RoomManager with default charIds for backward compat. Also added `select_character` to server validation.
+- **Patterns**: When extending discriminated union variants with new required fields, grep for all senders.
+
+## [2026-04-05] — [T04] Create manifest.json (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `public/data/characters/manifest.json`
+- **Learnings**: None — straightforward data file creation
+- **Patterns**: Manifest `file` paths are relative to public/ root (e.g. `data/characters/petyaj.json`)
+
+## [2026-04-05] — [T05] Generate 17 character JSON configs (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-characters.mjs`, 17 new JSON files in `public/data/characters/`
+- **Learnings**: Standard category split into strong (7/5-6 power/speed) and balanced (6/7) sub-variants with different walkSpeed and damage values
+- **Patterns**: Category presets: big (scale 1.25, slow, heavy), tall (1.15, medium), standard (1.0), short (0.85, fast, light). Generator is idempotent — rerun to regenerate.
+
+## [2026-04-05] — [T02] maxHp in FightEngine (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/__tests__/FightEngine.test.ts`, `src/shared/__tests__/CollisionSystem.test.ts`, `src/shared/__tests__/FighterFSM.test.ts`
+- **Learnings**: T01 added new required fields to CharacterConfig but didn't update all test configs — fixed in this task
+- **Patterns**: Optional `configs` param with `??` fallback keeps backward compat for `createInitialGameState()` without args
+
+## [2026-04-05] — [T03] resolvePushboxes two pushboxes (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/PhysicsSystem.ts`, `src/shared/FightEngine.ts`, `src/shared/__tests__/PhysicsSystem.test.ts`
+- **Learnings**: Original code only used P1's pushbox for both fighters — a latent bug masked by same-character matches
+- **Patterns**: Asymmetric pushbox overlap = min(right1,right2) - max(left1,left2) where each side uses its own halfWidth
+
+## [2026-04-05] — [T06] Character config validation tests (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/__tests__/CharacterConfig.test.ts`
+- **Learnings**: 122 tests covering all 17 configs — validates fields, types, ranges, animation keys, move keys, boxes
+- **Patterns**: `describe.each()` with loaded configs array for per-character parameterized tests
+
+## [2026-04-05] — [T07] Fighter.ts — scale, tint, shared texture (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/entities/Fighter.ts`
+- **Learnings**: `textures.exists()` check in loadAssets prevents double-loading shared spritesheet
+- **Patterns**: SHARED_TEXTURE constant for texture key. Scale/tint applied right after sprite creation.
+
+## [2026-04-05] — [T08] Preloader — manifest and shared spritesheet loading (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/Preloader.ts`
+- **Learnings**: char_default kept as fallback until FightScene accepts per-player configs (T12)
+- **Patterns**: Manifest loaded as `char_manifest`, spritesheet as `martial-hero` — both available via cache in subsequent scenes
+
+## [2026-04-05] — [T09] CharacterSelect scene — grid skeleton (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/CharacterSelect.ts` (new), `src/game/main.ts`
+- **Learnings**: Grid layout 6×3 = 18 cells (17 chars + "?" random). Manifest entries provide tint/stats for thumbnails.
+- **Patterns**: Scene registered between MainMenu and FightScene. `CharSelectData` interface for scene init data. `selectCell()` emits `characterSelected` event for loose coupling.
+
+## [2026-04-05] — [T10] Detail panel with animated sprite and stat bars (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/CharacterSelect.ts`
+- **Learnings**: Preview animations keyed as `preview_{charId}_idle` to avoid collision with Fighter animations. Scale varies by category for visual consistency in preview.
+- **Patterns**: Stat bars use proportional width (value/maxStat * barWidth). Preview sprite added to detailContainer for easy cleanup on selection change.
+
+## [2026-04-05] — [T11] Local selection flow (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/CharacterSelect.ts`
+- **Learnings**: Lazy-loading JSONs via `this.load.json()` + `this.load.start()` + `load.once('complete')` works well for on-demand assets. Same character picked twice = only 1 JSON to load.
+- **Patterns**: Local flow is P1→confirm→P2→confirm→load→fight. `setPlayerTurn()` resets selection state and re-binds event listener with player-specific highlight color. `cache.json.has()` checks if already loaded.
+
+## [2026-04-05] — [T12] FightScene per-player configs (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts`, `src/game/ui/HealthBar.ts`
+- **Learnings**: Removed preload() entirely — spritesheet already loaded in Preloader since T08. Fallback to `char_default` cache preserves backward compat for online flow.
+- **Patterns**: HealthBar accepts optional `maxHp` param (defaults to DEFAULT_HP). FightSceneData extended with optional p1Config/p2Config.
+
+## [2026-04-05] — [T13] Wire MainMenu → CharSelect → FightScene local (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`, `src/game/scenes/GameOver.ts`
+- **Learnings**: Minimal change — just two scene.start target swaps. CharacterSelect already handled config loading and passing.
+- **Patterns**: Full local loop: MainMenu→CharacterSelect→FightScene→GameOver→CharacterSelect (REMATCH) or MainMenu (MENU).
+
+## [2026-04-05] — [T20] GameOver — character names (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts`, `src/game/scenes/GameOver.ts`
+- **Learnings**: Tint number → CSS hex via `(tint & 0xFFFFFF).toString(16).padStart(6, '0')`. Nickname used as winner display name.
+- **Patterns**: Scene data extended incrementally — optional fields with fallbacks keep backward compat.
+
+## [2026-04-05] — [T15] Server — load all character configs at startup (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `server/main.ts`, `server/charConfigs.ts` (new), `server/__tests__/charConfigs.test.ts` (new), `server/__tests__/GameRoom.test.ts`
+- **Learnings**: Extracted config loading to `charConfigs.ts` to avoid importing `main.ts` (with Deno.serve side effects) in tests. GameRoom test config was missing T01 fields — fixed.
+- **Patterns**: Side-effect-free modules for testability. `loadAllConfigs(baseUrl)` takes URL for path resolution flexibility.
+
+## [2026-04-05] — [T14] NetworkClient — selectCharacter method (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/net/NetworkClient.ts`, `src/game/scenes/MainMenu.ts`
+- **Learnings**: `onFightStart` signature change is breaking — all callers must update. MainMenu ignores new params for now (backward compat until T19).
+- **Patterns**: Breaking callback signature changes require grep for all callers.
+
+## [2026-04-05] — [T16] Server — handle select_character message (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `server/RoomManager.ts`, `server/main.ts`, `server/__tests__/RoomManager.test.ts`, `server/__tests__/GameRoom.test.ts`
+- **Learnings**: `selectCharacter()` takes a validator function `isValidId` to decouple RoomManager from charConfigs module. `selectedChars` added to Room interface.
+- **Patterns**: Inject validation as callback to keep RoomManager independent of config storage.
+
+## [2026-04-05] — [T17] Server — startGameRoom with two configs (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `server/GameRoom.ts`, `server/main.ts`, `server/__tests__/GameRoom.test.ts`
+- **Learnings**: `onFightStart` callback in main.ts resolves selectedChars → configs via getCharConfig with defaultConfig fallback.
+- **Patterns**: Per-player config wiring: Room.selectedChars → getCharConfig → startGameRoom(room, p1Config, p2Config).
+
+## [2026-04-05] — [T18] CharacterSelect online flow (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/CharacterSelect.ts`
+- **Learnings**: Online mode uses single selection (no P1/P2 phases). Confirm sends select_character via NetworkClient, shows waiting state, handles opponent_selected checkmark, and on fight_start lazy-loads both character JSONs.
+- **Patterns**: Online callbacks set in setupOnlineCallbacks(), cleaned up before scene transition. Reuses existing lazy-load pattern from local flow.
+
+## [2026-04-05] — [T19] MainMenu online → CharacterSelect (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`
+- **Learnings**: Removed sendReady() from MainMenu entirely — character selection replaces the old "auto-ready" flow. Callbacks must be cleaned up before transferring NetworkClient to next scene.
+- **Patterns**: goToCharacterSelect() clears all MainMenu callbacks then transfers NetworkClient via scene data. New online flow: MainMenu→CharacterSelect→FightScene.
+
+## [2026-04-05] — SYNC: Documentation synchronized
+- **Documents updated**: CLAUDE.md, docs/deploy.md, docs/tasks.md
+- **Drift items found**: 4
+- **Drift items resolved**: 4
+- **Remaining debt**: 0
+- **Baseline commit**: 523615e
+
+## [2026-04-05] — [T21] Random selection ("?" cell) (Phase 2)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/CharacterSelect.ts`
+- **Learnings**: `time.delayedCall` chains work well for sequential visual effects — cleaner than setInterval with manual cleanup. `isRandomCycling` flag prevents interaction during animation.
+- **Patterns**: Cycling animation: 12-18 steps at 100ms, yellow highlight during cycling, then applySelection() for final pick.

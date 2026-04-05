@@ -47,6 +47,14 @@ The server is a Deno WebSocket server deployed to [Deno Deploy](https://dash.den
 3. Set entrypoint: `server/main.ts`
 4. Set env vars in project settings
 
+### Character config loading
+
+The server loads all 17 character configs at startup from `public/data/characters/manifest.json` via `server/charConfigs.ts`. Each player's character selection is validated against loaded configs. Per-player configs are passed to `startGameRoom()`.
+
+- Manifest: `public/data/characters/manifest.json`
+- Config module: `server/charConfigs.ts` — exports `getCharConfig(id)`, `getDefaultConfig()`, `getAllCharIds()`
+- If manifest fails to load, the server exits with code 1
+
 ### Local development
 
 ```bash

@@ -36,12 +36,12 @@ vite/           — Vite build configs
 ```
 src/shared/          — pure logic (types, constants, physics, engine), zero platform imports
 src/game/            — Phaser client (scenes, entities, UI, input, networking)
-src/game/scenes/     — Phaser scenes (Boot, Preloader, MainMenu, FightScene, GameOver)
+src/game/scenes/     — Phaser scenes (Boot, Preloader, MainMenu, CharacterSelect, FightScene, GameOver)
 src/game/entities/   — visual wrappers + FSM (Fighter, FighterFSM)
 src/game/systems/    — input, camera, etc.
 src/game/ui/         — HUD elements (HealthBar, RoundDisplay, TouchControls)
 src/game/net/        — NetworkClient (WebSocket wrapper)
-server/              — Deno authoritative server (main, RoomManager, GameRoom, utils)
+server/              — Deno authoritative server (main, RoomManager, GameRoom, charConfigs, utils)
 server/__tests__/    — Deno test files (run with `deno test`)
 public/data/         — JSON character configs
 public/assets/       — sprites, sounds, images
