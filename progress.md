@@ -22,6 +22,7 @@
 - **Vite env vars**: `import.meta.env.VITE_WS_URL` — typed via `vite/client`, set via `.env` file or `VITE_WS_URL=... npm run build`
 - **Sprite orientation**: Martial Hero spritesheet faces LEFT by default. `setFlipX(state.facingRight)` — flip when facing right, default when facing left.
 - **Phaser setPath scope**: `setPath('assets')` applies to ALL subsequent loads. Reset with `setPath('')` before loading assets outside the `assets/` directory.
+- **SoundManager ownership**: MainMenu creates, passes via scene data to CharacterSelect → FightScene. Each scene calls `transferTo(this)` to update the internal scene ref.
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -487,3 +488,24 @@
 - **Files changed**: `src/game/scenes/FightScene.ts`, `src/game/net/NetworkClient.ts`
 - **Learnings**: Online mode must use server events (not local engine events) to avoid double visual effects. NetworkClient.onStateUpdate extended with optional events param.
 - **Patterns**: applyServerState must copy ALL FighterState fields — missing comboCount/comboDamage/specialCooldown/isCrouching caused silent desync. Event source branching: `mode === 'online'` → remoteEvents, else engine.events.
+
+## [2026-04-05] — [T18] SoundManager system (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/systems/SoundManager.ts`
+- **Learnings**: Phaser `scene.sound` is global — mute applies to all scenes. SoundManager wraps it with localStorage persistence.
+
+## [2026-04-05] — [T19] Load audio in Preloader + music + announcer (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/Preloader.ts`, `src/game/scenes/MainMenu.ts`, `src/game/scenes/CharacterSelect.ts`, `src/game/scenes/FightScene.ts`, `public/assets/audio/*.wav`
+- **Learnings**: SoundManager passed through scene chain via scene data. Must call `transferTo(scene)` when changing scenes to update internal scene reference.
+- **Patterns**: SoundManager ownership: MainMenu creates it, passes to CharacterSelect → FightScene via scene data. Each scene calls `transferTo(this)`.
+
+## [2026-04-05] — [T20] UI sounds for menus + char select (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`, `src/game/scenes/CharacterSelect.ts`
+- **Learnings**: Button click sounds added via wrapper in `addButton` onClick handler (MainMenu) and `applySelection`/`onConfirm` (CharacterSelect).
+
+## [2026-04-05] — [T21] Mute button with persistent state (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`
+- **Learnings**: Text-based emoji icons (🔊/🔇) work well as quick UI without sprite assets. Placed at top-right (990, 20).
