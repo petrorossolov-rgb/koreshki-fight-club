@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import type { CharacterConfig, GameState, GameEvent } from '@shared/types';
 import { RoundPhase } from '@shared/types';
-import { FIXED_DT } from '@shared/constants';
+import { FIXED_DT, FLOOR_Y, STAGE_WIDTH, STAGE_HEIGHT } from '@shared/constants';
 import { createFightEngine, type FightEngine } from '@shared/FightEngine';
 import { Fighter } from '@game/entities/Fighter';
 import { InputManager, NetworkSource } from '@game/systems/InputManager';
@@ -71,6 +71,11 @@ export class FightScene extends Scene {
     create(): void {
         this.cameras.main.setBackgroundColor(0x1a1a2e);
         this.add.image(512, 288, 'background').setDisplaySize(1024, 576);
+
+        // Ground plane below FLOOR_Y
+        this.add.rectangle(512, FLOOR_Y + (STAGE_HEIGHT - FLOOR_Y) / 2, STAGE_WIDTH,
+            STAGE_HEIGHT - FLOOR_Y, 0x3a2a1a);
+        this.add.rectangle(512, FLOOR_Y, STAGE_WIDTH, 3, 0x8b7355).setOrigin(0.5, 0.5);
 
         if (this.soundManager) {
             this.soundManager.transferTo(this);
