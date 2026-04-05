@@ -475,3 +475,15 @@
 - **Files changed**: `src/game/scenes/FightScene.ts`
 - **Learnings**: time.timeScale affects Phaser's delta — accumulator gets less delta, fewer engine steps = desired slow-mo effect. Online mode must skip to prevent desync.
 - **Patterns**: `this.time.timeScale = 0.3` + delayedCall(1000ms real) to restore. Guard with `if (this.mode === 'local')`.
+
+## [2026-04-05] — [T14] ComboCounter + CooldownIndicator UI components (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/ComboCounter.ts` (new), `src/game/ui/CooldownIndicator.ts` (new)
+- **Learnings**: Phaser background rectangles don't need stored ref if never modified — just `scene.add.rectangle()`.
+- **Patterns**: Scale-pop via setScale(1.4) + tween back to 1.0 with Back.easeOut. Flash via alpha tween (1→0.4) yoyo repeat -1.
+
+## [2026-04-05] — [T15] Wire combo UI + events into FightScene (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts`, `src/game/net/NetworkClient.ts`
+- **Learnings**: Online mode must use server events (not local engine events) to avoid double visual effects. NetworkClient.onStateUpdate extended with optional events param.
+- **Patterns**: applyServerState must copy ALL FighterState fields — missing comboCount/comboDamage/specialCooldown/isCrouching caused silent desync. Event source branching: `mode === 'online'` → remoteEvents, else engine.events.
