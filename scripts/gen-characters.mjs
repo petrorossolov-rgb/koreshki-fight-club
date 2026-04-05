@@ -31,7 +31,7 @@ const animations = {
 // | Category | scale | walkSpeed | jumpVelY | weight | maxHp | Punch dmg/s/a/r | Kick dmg/s/a/r |
 const CATEGORY_PRESETS = {
   big: {
-    scale: 1.25, walkSpeed: 2.8, jumpVelY: -10, weight: 1.4, maxHp: 1100,
+    scale: 1.25, walkSpeed: 2.8, jumpVelY: -10, weight: 1.4, maxHp: 1100, groundOffset: 20,
     specialCooldownFrames: 300,
     pushbox: { x: -28, y: -112, width: 56, height: 112 },
     hurtbox: { x: -25, y: -106, width: 50, height: 106 },
@@ -49,7 +49,7 @@ const CATEGORY_PRESETS = {
     ],
   },
   tall: {
-    scale: 1.15, walkSpeed: 3.5, jumpVelY: -11, weight: 1.1, maxHp: 1100,
+    scale: 1.15, walkSpeed: 3.5, jumpVelY: -11, weight: 1.1, maxHp: 1100, groundOffset: 12,
     specialCooldownFrames: 240,
     pushbox: { x: -25, y: -103, width: 50, height: 103 },
     hurtbox: { x: -23, y: -98, width: 46, height: 98 },
@@ -67,7 +67,7 @@ const CATEGORY_PRESETS = {
     ],
   },
   standard: {
-    scale: 1.0, walkSpeed: 3.5, jumpVelY: -11, weight: 1.0, maxHp: 1000,
+    scale: 1.0, walkSpeed: 3.5, jumpVelY: -11, weight: 1.0, maxHp: 1000, groundOffset: 0,
     specialCooldownFrames: 240,
     pushbox: { x: -22, y: -90, width: 44, height: 90 },
     hurtbox: { x: -20, y: -85, width: 40, height: 85 },
@@ -85,7 +85,7 @@ const CATEGORY_PRESETS = {
     ],
   },
   short: {
-    scale: 0.85, walkSpeed: 5.0, jumpVelY: -13, weight: 0.8, maxHp: 1000,
+    scale: 0.85, walkSpeed: 5.0, jumpVelY: -13, weight: 0.8, maxHp: 1000, groundOffset: -10,
     specialCooldownFrames: 180,
     pushbox: { x: -19, y: -77, width: 38, height: 77 },
     hurtbox: { x: -17, y: -72, width: 34, height: 72 },
@@ -213,6 +213,7 @@ for (const entry of manifest.characters) {
     tint: entry.tint,
     portraitFrame: 0,
     maxHp: preset.maxHp,
+    groundOffset: preset.groundOffset,
     chainRoutes,
     specialCooldownFrames: preset.specialCooldownFrames,
   };

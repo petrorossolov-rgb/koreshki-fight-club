@@ -105,6 +105,7 @@ export interface CharacterConfig {
     tint: number;              // hex color tint (0xFFFFFF = no tint)
     portraitFrame: number;     // frame index for preview in select grid
     maxHp: number;             // per-character HP (replaces DEFAULT_HP usage)
+    groundOffset: number;            // pixels to shift sprite Y for floor alignment (accounts for sprite padding)
     chainRoutes?: ChainRoute[];
     specialCooldownFrames?: number;
 }
