@@ -39,6 +39,7 @@ export class MainMenu extends Scene {
             this.tryLockOrientation();
         }
 
+        this.createMuteButton();
         this.showMainView();
 
         this.events.on('shutdown', () => this.removeDomInput());
@@ -302,6 +303,18 @@ export class MainMenu extends Scene {
             align: 'center',
         }).setOrigin(0.5);
         this.uiContainer.add(label);
+    }
+
+    private createMuteButton(): void {
+        const icon = this.soundManager.isMuted ? '🔇' : '🔊';
+        const btn = this.add.text(990, 20, icon, {
+            fontSize: '28px',
+        }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+
+        btn.on('pointerdown', () => {
+            const muted = this.soundManager.toggleMute();
+            btn.setText(muted ? '🔇' : '🔊');
+        });
     }
 
     private createFullscreenButton(): void {
