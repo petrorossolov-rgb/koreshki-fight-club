@@ -38,8 +38,8 @@ src/shared/          — pure logic (types, constants, physics, engine), zero pl
 src/game/            — Phaser client (scenes, entities, UI, input, networking)
 src/game/scenes/     — Phaser scenes (Boot, Preloader, MainMenu, CharacterSelect, FightScene, GameOver)
 src/game/entities/   — visual wrappers + FSM (Fighter, FighterFSM)
-src/game/systems/    — input, camera, etc.
-src/game/ui/         — HUD elements (HealthBar, RoundDisplay, TouchControls)
+src/game/systems/    — InputManager, SoundManager
+src/game/ui/         — HUD elements (HealthBar, RoundDisplay, TouchControls, ComboCounter, CooldownIndicator, HitSpark)
 src/game/net/        — NetworkClient (WebSocket wrapper)
 server/              — Deno authoritative server (main, RoomManager, GameRoom, charConfigs, utils)
 server/__tests__/    — Deno test files (run with `deno test`)
@@ -67,6 +67,7 @@ deno run --allow-net --allow-read --allow-env --config server/deno.json server/m
 cd server && deno test --allow-read --config deno.json  # run server tests
 node scripts/gen-characters.mjs  # regenerate 17 character JSON configs
 node scripts/gen-audio.mjs       # regenerate procedural WAV sound effects
+node scripts/gen-bg.mjs          # regenerate fight scene background
 ```
 
 ## Phases

@@ -587,3 +587,10 @@
 - **Fix**: (1) Generated proper bg.png with dark sky gradient + brown ground + horizon line via `scripts/gen-bg.mjs`. (2) Added brown ground rectangle + floor line at FLOOR_Y in FightScene.create().
 - **Prevention**: Visual assets should be validated during asset generation tasks (T11/T12), not deferred to deploy.
 - **Time to resolve**: 1 cycle
+
+## [2026-04-05] — SYNC: Documentation synchronized
+- **Documents updated**: CLAUDE.md, docs/plan-phase3.md
+- **Drift items found**: 5
+- **Drift items resolved**: 5
+- **Remaining debt**: 0
+- **Baseline commit**: e015f32

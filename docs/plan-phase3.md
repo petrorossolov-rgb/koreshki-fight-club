@@ -47,7 +47,7 @@ The existing [constitution in CLAUDE.md](../CLAUDE.md) applies. Phase 3 adds no 
 |-------|-----------|---------|-----------|
 | Audio | Phaser built-in (WebAudio) | 3.90 | Already in engine, no new deps |
 | SFX assets | Kenney.nl / freesound.org (CC0) | — | Free, no licensing issues |
-| QR codes | `qrcode` npm package | ^1.5 | Lightweight, generates canvas/data URL for invite QR |
+| QR codes | `qrcode` npm package | ^1.5 | Lightweight, generates canvas/data URL for invite QR (deferred to Phase 4) |
 | Particles | Phaser Particles (built-in) | 3.90 | Hit sparks, victory confetti |
 
 ### MCP Servers
@@ -206,7 +206,7 @@ Deliverable: GameOver scene feels like a reward, shows match stats
 - [ ] **T34** — Match stats panel: hits landed, damage dealt, max combo, rounds won — for both players
 - [ ] **T35** — Win quote: random humorous line per character (from config), displayed under winner name
 - [ ] **T36** — Victory confetti particles: colored particles falling from top on win
-- [ ] **T37** — Add `winQuotes: string[]` to CharacterConfig, update 17 configs with 3-5 quotes each
+- [ ] **T37** — _(deferred to Phase 4)_ Add `winQuotes: string[]` to CharacterConfig, update 17 configs with 3-5 quotes each
 
 ### Phase 3.5: Lobby & Invite Links
 
