@@ -77,8 +77,8 @@ export class FightScene extends Scene {
         }
 
         this.healthBars = [
-            new HealthBar(this, 0, this.p1Config.maxHp),
-            new HealthBar(this, 1, this.p2Config.maxHp),
+            new HealthBar(this, 0, this.p1Config.maxHp, this.p1Config.nickname || this.p1Config.id),
+            new HealthBar(this, 1, this.p2Config.maxHp, this.p2Config.nickname || this.p2Config.id),
         ];
         this.roundDisplay = new RoundDisplay(this);
         this.hitSpark = new HitSpark(this);
