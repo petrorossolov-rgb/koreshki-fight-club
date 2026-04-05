@@ -40,7 +40,17 @@ export class MainMenu extends Scene {
         }
 
         this.createMuteButton();
-        this.showMainView();
+
+        // Auto-join room from URL param (?room=ABCD)
+        const params = new URLSearchParams(window.location.search);
+        const joinCode = params.get('room');
+        if (joinCode && /^[A-Z]{4}$/i.test(joinCode)) {
+            history.replaceState(null, '', window.location.pathname);
+            this.statusText.setText('Joining room...');
+            this.connectAndDo(() => this.net!.joinRoom(joinCode.toUpperCase()));
+        } else {
+            this.showMainView();
+        }
 
         this.events.on('shutdown', () => this.removeDomInput());
     }
@@ -215,6 +225,7 @@ export class MainMenu extends Scene {
                 action();
             } else if (state === NetState.Disconnected) {
                 this.statusText.setText('Connection failed');
+                if (this.uiContainer.length === 0) this.showMainView();
             }
         };
 
@@ -245,6 +256,7 @@ export class MainMenu extends Scene {
 
         this.net.callbacks.onError = (message: string) => {
             this.statusText.setText(message);
+            if (this.uiContainer.length === 0) this.showMainView();
         };
     }
 
