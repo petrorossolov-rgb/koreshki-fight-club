@@ -554,3 +554,9 @@
 - **Files changed**: none (verification only)
 - **Learnings**: All test suites green after Phase 3 changes: 342 vitest tests, 29 deno tests, production build succeeds.
 - **Patterns**: none
+
+## [2026-04-05] — [T34] Mobile testing
+- **Status**: ✅ Done (code review only — manual device testing deferred to user)
+- **Files changed**: none (verification only)
+- **Learnings**: All 8 mobile features verified in code: touch P+K, audio autoplay (handled by Phaser WebAudioSoundManager automatically), mute button, invite link flow, mobile room code DOM overlay, auto-reconnect with overlay UI, combo counter, cooldown indicator. Physical device testing remains for the user.
+- **Patterns**: Phaser 3 WebAudioSoundManager auto-unlocks AudioContext on first user gesture — no manual `resume()` needed.
