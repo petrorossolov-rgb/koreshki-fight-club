@@ -107,7 +107,10 @@ export class FightScene extends Scene {
             this.accumulator -= FIXED_DT;
         }
 
-        const { fighters, roundPhase, roundTimer } = this.engine.state;
+        const { fighters, roundPhase, roundTimer, hitStop } = this.engine.state;
+
+        // Hit-stop zoom effect
+        this.cameras.main.setZoom(hitStop > 0 ? 1.02 : 1.0);
 
         // Sync visuals to authoritative state
         this.fighters[0].syncToState(fighters[0]);

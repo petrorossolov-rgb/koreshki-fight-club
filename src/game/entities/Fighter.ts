@@ -19,6 +19,8 @@ export class Fighter {
     private readonly config: CharacterConfig;
     private readonly animPrefix: string;
     private currentAnimKey = '';
+    private flashFrames = 0;
+    private wasInHitstun = false;
 
     constructor(scene: Phaser.Scene, config: CharacterConfig, playerIndex: number) {
         this.config = config;
@@ -54,6 +56,32 @@ export class Fighter {
             this.sprite.play(animKey);
             this.currentAnimKey = animKey;
         }
+
+        // Detect hitstun entry → trigger flash
+        const inHitstun = state.subState === 'hitstun';
+        if (inHitstun && !this.wasInHitstun) {
+            this.flashHit();
+        }
+        this.wasInHitstun = inHitstun;
+
+        // Tick flash counter
+        if (this.flashFrames > 0) {
+            this.flashFrames--;
+            if (this.flashFrames === 0) {
+                // Restore original tint
+                if (this.config.tint !== 0xFFFFFF) {
+                    this.sprite.setTint(this.config.tint);
+                } else {
+                    this.sprite.clearTint();
+                }
+            }
+        }
+    }
+
+    /** Flash white on hit for 3 frames. */
+    flashHit(): void {
+        this.sprite.setTintFill(0xffffff);
+        this.flashFrames = 3;
     }
 
     destroy(): void {
