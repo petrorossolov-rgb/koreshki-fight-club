@@ -242,7 +242,9 @@ export class MainMenu extends Scene {
         };
 
         this.net.callbacks.onRoomJoined = (playerIndex: 0 | 1) => {
-            // Joiner → go to CharacterSelect
+            // room_joined fires for both creator and joiner;
+            // creator already sees room code view — only joiner should navigate
+            if (this.view === 'create') return;
             this.goToCharacterSelect(playerIndex);
         };
 
