@@ -542,3 +542,15 @@
 - **Files changed**: `src/game/net/NetworkClient.ts`, `src/game/scenes/FightScene.ts`
 - **Learnings**: sessionStorage auto-clears on tab close — perfect for reconnect data that shouldn't persist. cleanup() needs `updateState` param to avoid clearing state during reconnect attempts. Error messages during reconnect mean rejoin failed — should abort reconnect loop.
 - **Patterns**: Reconnect delays [1,2,4,8,8]s. Save {roomCode, playerIndex} to sessionStorage on disconnect. Semi-transparent overlay container at depth 1000 for reconnect UI.
+
+## [2026-04-05] — [T32] Update server for Phase 3 (configs + events + reconnect)
+- **Status**: ✅ Done
+- **Files changed**: `server/GameRoom.ts`, `server/__tests__/GameRoom.test.ts`
+- **Learnings**: CharacterConfig new fields (chainRoutes, specialCooldownFrames) are optional — server loads configs generically, no changes needed in charConfigs.ts. FighterState new fields (comboCount, comboDamage, specialCooldown, isCrouching) are initialized by FightEngine, not by configs — server test configs didn't need updating.
+- **Patterns**: broadcastState now includes engine.events array alongside state and frame.
+
+## [2026-04-05] — [T33] Integration testing (local + online)
+- **Status**: ✅ Done
+- **Files changed**: none (verification only)
+- **Learnings**: All test suites green after Phase 3 changes: 342 vitest tests, 29 deno tests, production build succeeds.
+- **Patterns**: none
