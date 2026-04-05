@@ -38,6 +38,9 @@ export class GameOver extends Scene {
         const p2Config = data.p2Config;
         const winnerConfig = winnerIdx === 0 ? p1Config : p2Config;
 
+        // Confetti particles (behind everything)
+        this.emitConfetti(winnerTint);
+
         // Winner sprite with idle animation
         if (winnerConfig) {
             this.showWinnerSprite(winnerConfig, winnerIdx, winnerTint);
@@ -80,6 +83,46 @@ export class GameOver extends Scene {
         this.createButton(512, btnY + 70, 'MENU', () => {
             this.scene.start('MainMenu');
         });
+    }
+
+    private emitConfetti(baseTint: number): void {
+        // Generate a small square texture for confetti
+        const key = 'confetti_px';
+        if (!this.textures.exists(key)) {
+            const g = this.add.graphics();
+            g.fillStyle(0xffffff);
+            g.fillRect(0, 0, 8, 8);
+            g.generateTexture(key, 8, 8);
+            g.destroy();  // remove from display list after generating texture
+        }
+
+        // Color variations from winner tint
+        const r = (baseTint >> 16) & 0xFF;
+        const g = (baseTint >> 8) & 0xFF;
+        const b = baseTint & 0xFF;
+        const tints: number[] = [
+            baseTint,
+            ((Math.min(r + 60, 255)) << 16) | ((Math.min(g + 60, 255)) << 8) | Math.min(b + 60, 255),
+            ((Math.max(r - 40, 0)) << 16) | ((Math.max(g - 40, 0)) << 8) | Math.max(b - 40, 0),
+            0xFFFFFF,
+            0xFFD700,
+        ];
+
+        this.add.particles(0, 0, key, {
+            x: { min: 0, max: 1024 },
+            y: -10,
+            gravityY: 80,
+            speedY: { min: 30, max: 80 },
+            speedX: { min: -30, max: 30 },
+            rotate: { min: 0, max: 360 },
+            scaleX: { min: 0.4, max: 1.2 },
+            scaleY: { min: 0.4, max: 1.0 },
+            alpha: { start: 1, end: 0.3 },
+            lifespan: 6000,
+            frequency: 80,
+            quantity: 2,
+            tint: tints,
+        }).setDepth(-1);
     }
 
     private showWinnerSprite(config: CharacterConfig, playerIndex: number, tint: number): void {
