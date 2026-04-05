@@ -1,3 +1,4 @@
+import type { GameState } from "@shared/types.ts";
 import { sendMsg } from "./utils.ts";
 
 export interface Room {
@@ -6,10 +7,14 @@ export interface Room {
   ready: [boolean, boolean];
   selectedChars: [string | null, string | null];
   started: boolean;
+  disconnectTimers: [number | null, number | null];
   onDestroy?: () => void;
   onInput?: (playerIndex: 0 | 1, bits: number) => void;
   onFightStart?: (room: Room) => void;
+  onGetState?: () => { state: GameState; frame: number } | null;
 }
+
+const GRACE_PERIOD_MS = 15_000;
 
 const rooms = new Map<string, Room>();
 const playerToRoom = new Map<WebSocket, { room: Room; index: 0 | 1 }>();
@@ -41,6 +46,7 @@ export function createRoom(ws: WebSocket): Room {
     ready: [false, false],
     selectedChars: [null, null],
     started: false,
+    disconnectTimers: [null, null],
   };
   rooms.set(code, room);
   playerToRoom.set(ws, { room, index: 0 });
@@ -137,17 +143,77 @@ export function handleDisconnect(ws: WebSocket): void {
 
   console.log(`[room] ${room.code}: player ${index + 1} disconnected`);
 
-  // Notify opponent
-  const opponentIndex = index === 0 ? 1 : 0;
+  const opponentIndex = (index === 0 ? 1 : 0) as 0 | 1;
   const opponent = room.players[opponentIndex];
-  if (opponent) {
-    sendMsg(opponent, { type: "opponent_disconnected" });
+
+  // If game hasn't started or no opponent, use immediate cleanup
+  if (!room.started || !opponent) {
+    if (opponent) {
+      sendMsg(opponent, { type: "opponent_disconnected" });
+    }
+    if (!room.players[0] && !room.players[1]) {
+      destroyRoom(room);
+    }
+    return;
   }
 
-  // Destroy room if both players gone
-  if (!room.players[0] && !room.players[1]) {
-    destroyRoom(room);
+  // Game in progress — start grace timer
+  sendMsg(opponent, { type: "opponent_disconnecting", graceSeconds: GRACE_PERIOD_MS / 1000 });
+
+  room.disconnectTimers[index] = setTimeout(() => {
+    room.disconnectTimers[index] = null;
+    console.log(`[room] ${room.code}: player ${index + 1} grace period expired`);
+    const opp = room.players[opponentIndex];
+    if (opp) {
+      sendMsg(opp, { type: "opponent_disconnected" });
+    }
+    if (!room.players[0] && !room.players[1]) {
+      destroyRoom(room);
+    }
+  }, GRACE_PERIOD_MS) as unknown as number;
+}
+
+export function rejoinRoom(ws: WebSocket, code: string, playerIndex: 0 | 1): boolean {
+  const room = rooms.get(code);
+  if (!room) {
+    sendMsg(ws, { type: "error", message: `Room ${code} not found` });
+    return false;
   }
+  if (!room.started) {
+    sendMsg(ws, { type: "error", message: "Game not in progress" });
+    return false;
+  }
+  if (room.players[playerIndex] !== null) {
+    sendMsg(ws, { type: "error", message: "Slot already occupied" });
+    return false;
+  }
+
+  // Clear grace timer
+  if (room.disconnectTimers[playerIndex] !== null) {
+    clearTimeout(room.disconnectTimers[playerIndex]!);
+    room.disconnectTimers[playerIndex] = null;
+  }
+
+  // Re-seat player
+  room.players[playerIndex] = ws;
+  playerToRoom.set(ws, { room, index: playerIndex });
+
+  console.log(`[room] ${room.code}: player ${playerIndex + 1} rejoined`);
+
+  // Send current game state to reconnecting player
+  const snapshot = room.onGetState?.();
+  if (snapshot) {
+    sendMsg(ws, { type: "rejoin_success", state: snapshot.state, frame: snapshot.frame });
+  }
+
+  // Notify opponent
+  const opponentIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;
+  const opponent = room.players[opponentIndex];
+  if (opponent) {
+    sendMsg(opponent, { type: "opponent_reconnected" });
+  }
+
+  return true;
 }
 
 export function destroyRoom(room: Room): void {

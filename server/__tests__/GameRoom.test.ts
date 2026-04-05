@@ -86,6 +86,7 @@ function createMockRoom(): Room {
     ready: [true, true],
     selectedChars: [null, null],
     started: true,
+    disconnectTimers: [null, null],
   };
 }
 

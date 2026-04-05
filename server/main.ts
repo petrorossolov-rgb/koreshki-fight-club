@@ -1,5 +1,5 @@
 import type { ClientMsg } from "@shared/types.ts";
-import { createRoom, joinRoom, setReady, selectCharacter, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
+import { createRoom, joinRoom, rejoinRoom, setReady, selectCharacter, handleDisconnect, getPlayerRoom } from "./RoomManager.ts";
 import { startGameRoom } from "./GameRoom.ts";
 import { loadAllConfigs, getDefaultConfig, getCharConfig } from "./charConfigs.ts";
 
@@ -40,7 +40,7 @@ function isRateLimited(ws: WebSocket): boolean {
 
 // ── Message validation ─────────────────────────────────────────────
 
-const VALID_TYPES = new Set(["create_room", "join_room", "ready", "input", "select_character"]);
+const VALID_TYPES = new Set(["create_room", "join_room", "ready", "input", "select_character", "rejoin_room"]);
 
 function validateMessage(data: unknown): ClientMsg | null {
   if (typeof data !== "object" || data === null) return null;
@@ -64,6 +64,10 @@ function validateMessage(data: unknown): ClientMsg | null {
     case "select_character":
       if (typeof obj.characterId !== "string" || obj.characterId.length === 0) return null;
       return { type: "select_character", characterId: obj.characterId };
+    case "rejoin_room":
+      if (typeof obj.code !== "string" || obj.code.length !== 4) return null;
+      if (obj.playerIndex !== 0 && obj.playerIndex !== 1) return null;
+      return { type: "rejoin_room", code: obj.code.toUpperCase(), playerIndex: obj.playerIndex };
     default:
       return null;
   }
@@ -123,6 +127,9 @@ function handleWebSocket(ws: WebSocket): void {
         break;
       case "ready":
         setReady(ws);
+        break;
+      case "rejoin_room":
+        rejoinRoom(ws, msg.code, msg.playerIndex);
         break;
       case "input": {
         const entry = getPlayerRoom(ws);

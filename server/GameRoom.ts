@@ -36,6 +36,9 @@ export function startGameRoom(room: Room, p1Config: CharacterConfig, p2Config: C
     }
   }, FIXED_DT) as unknown as number;
 
+  // Expose current state for reconnect
+  room.onGetState = () => ({ state: engine.state, frame: grState.frameCount });
+
   // Clean up on room destroy
   room.onDestroy = () => {
     stopGameRoom(grState);

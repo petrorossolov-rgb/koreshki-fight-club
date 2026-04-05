@@ -162,7 +162,8 @@ export type ClientMsg =
     | { type: 'join_room'; code: string }
     | { type: 'ready' }
     | { type: 'input'; frame: number; bits: number }
-    | { type: 'select_character'; characterId: string };
+    | { type: 'select_character'; characterId: string }
+    | { type: 'rejoin_room'; code: string; playerIndex: 0 | 1 };
 
 export type ServerMsg =
     | { type: 'room_created'; code: string }
@@ -172,4 +173,7 @@ export type ServerMsg =
     | { type: 'opponent_selected' }
     | { type: 'state_update'; state: GameState; frame: number; events?: GameEvent[] }
     | { type: 'opponent_disconnected' }
+    | { type: 'opponent_disconnecting'; graceSeconds: number }
+    | { type: 'opponent_reconnected' }
+    | { type: 'rejoin_success'; state: GameState; frame: number }
     | { type: 'error'; message: string };

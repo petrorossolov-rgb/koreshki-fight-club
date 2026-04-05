@@ -2,6 +2,7 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert
 import {
   createRoom,
   joinRoom,
+  rejoinRoom,
   setReady,
   selectCharacter,
   handleDisconnect,
@@ -252,6 +253,100 @@ Deno.test("setReady backward compat still triggers fight_start", () => {
 
   assertEquals(room.started, true);
   assertEquals(fightStarted, true);
+
+  destroyRoom(room);
+});
+
+// ── Reconnect / grace timer tests ─────────────────────────────────
+
+function setupStartedRoom() {
+  const ws1 = createMockWS();
+  const ws2 = createMockWS();
+  const room = createRoom(ws1);
+  joinRoom(ws2, room.code);
+  selectCharacter(ws1, "petyaj", isValidId);
+  selectCharacter(ws2, "ali", isValidId);
+  // Simulate onGetState (normally set by GameRoom)
+  room.onGetState = () => ({
+    state: { fighters: [{}, {}], roundPhase: "fight", roundTimer: 90, currentRound: 1, phaseFrames: 100, hitStop: 0, matchStats: { hits: [0, 0], damage: [0, 0], maxCombo: [0, 0] } } as never,
+    frame: 42,
+  });
+  return { ws1, ws2, room };
+}
+
+Deno.test("handleDisconnect during game starts grace timer, sends opponent_disconnecting", () => {
+  const { ws1, ws2, room } = setupStartedRoom();
+
+  handleDisconnect(ws1);
+
+  // Player slot cleared
+  assertEquals(room.players[0], null);
+
+  // Opponent gets opponent_disconnecting (not opponent_disconnected yet)
+  const msgs = ws2.sentMessages.map((m) => JSON.parse(m));
+  const disconnecting = msgs.find((m: Record<string, unknown>) => m.type === "opponent_disconnecting");
+  assertExists(disconnecting);
+  assertEquals(disconnecting.graceSeconds, 15);
+
+  // Room still exists
+  assertExists(getRoom(room.code));
+
+  // Clean up timer
+  if (room.disconnectTimers[0] !== null) clearTimeout(room.disconnectTimers[0]!);
+  destroyRoom(room);
+});
+
+Deno.test("rejoinRoom re-seats player and notifies opponent", () => {
+  const { ws1, ws2, room } = setupStartedRoom();
+  const code = room.code;
+
+  handleDisconnect(ws1);
+
+  // Rejoin with new ws
+  const ws1b = createMockWS();
+  const result = rejoinRoom(ws1b, code, 0);
+
+  assertEquals(result, true);
+  assertEquals(room.players[0], ws1b);
+
+  // Reconnected player gets rejoin_success
+  const rejoinMsgs = ws1b.sentMessages.map((m) => JSON.parse(m));
+  const success = rejoinMsgs.find((m: Record<string, unknown>) => m.type === "rejoin_success");
+  assertExists(success);
+  assertEquals(success.frame, 42);
+
+  // Opponent gets opponent_reconnected
+  const oppMsgs = ws2.sentMessages.map((m) => JSON.parse(m));
+  const reconnected = oppMsgs.find((m: Record<string, unknown>) => m.type === "opponent_reconnected");
+  assertExists(reconnected);
+
+  // Grace timer cleared
+  assertEquals(room.disconnectTimers[0], null);
+
+  destroyRoom(room);
+});
+
+Deno.test("rejoinRoom with wrong code returns false", () => {
+  const { ws1, room } = setupStartedRoom();
+  handleDisconnect(ws1);
+
+  const ws1b = createMockWS();
+  const result = rejoinRoom(ws1b, "ZZZZ", 0);
+  assertEquals(result, false);
+  assertEquals(lastMsg(ws1b).type, "error");
+
+  if (room.disconnectTimers[0] !== null) clearTimeout(room.disconnectTimers[0]!);
+  destroyRoom(room);
+});
+
+Deno.test("rejoinRoom with occupied slot returns false", () => {
+  const { room } = setupStartedRoom();
+
+  // Try to rejoin slot 1 which is still occupied by ws2
+  const wsIntruder = createMockWS();
+  const result = rejoinRoom(wsIntruder, room.code, 1);
+  assertEquals(result, false);
+  assertEquals(lastMsg(wsIntruder).type, "error");
 
   destroyRoom(room);
 });
