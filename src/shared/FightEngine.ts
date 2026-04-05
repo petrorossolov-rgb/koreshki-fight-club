@@ -37,6 +37,10 @@ export function createInitialFighterState(
         stunDuration: 0,
         hitStopFrames: 0,
         roundWins: 0,
+        comboCount: 0,
+        comboDamage: 0,
+        specialCooldown: 0,
+        isCrouching: false,
     };
 }
 
@@ -56,6 +60,11 @@ export function createInitialGameState(
         currentRound: 1,
         phaseFrames: 0,
         hitStop: 0,
+        matchStats: {
+            hits: [0, 0],
+            damage: [0, 0],
+            maxCombo: [0, 0],
+        },
     };
 }
 

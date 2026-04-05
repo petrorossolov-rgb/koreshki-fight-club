@@ -45,6 +45,23 @@ export interface HitResult {
     blocked: boolean;
 }
 
+// ── Combo / Chain ───────────────────────────────────────────────────
+
+export interface ChainRoute {
+    from: string;
+    to: string;
+    cancelWindow: [number, number]; // [earliest, latest] frameInState
+    onHitOnly: boolean;
+}
+
+export type GameEvent =
+    | { type: 'hit'; attackerIdx: number; defenderIdx: number; moveKey: string; damage: number; x: number; y: number }
+    | { type: 'block'; x: number; y: number }
+    | { type: 'ko'; loserIdx: number }
+    | { type: 'round_start'; round: number }
+    | { type: 'match_end'; winnerIdx: number }
+    | { type: 'special_used'; playerIdx: number };
+
 // ── Character Config (JSON data) ─────────────────────────────────────
 
 export interface AnimDef {
@@ -88,6 +105,8 @@ export interface CharacterConfig {
     tint: number;              // hex color tint (0xFFFFFF = no tint)
     portraitFrame: number;     // frame index for preview in select grid
     maxHp: number;             // per-character HP (replaces DEFAULT_HP usage)
+    chainRoutes?: ChainRoute[];
+    specialCooldownFrames?: number;
 }
 
 // ── Fighter State (per-frame mutable state) ──────────────────────────
@@ -107,6 +126,10 @@ export interface FighterState {
     stunDuration: number;         // frames of hitstun/blockstun remaining (set on hit)
     hitStopFrames: number;
     roundWins: number;
+    comboCount: number;
+    comboDamage: number;
+    specialCooldown: number;
+    isCrouching: boolean;
 }
 
 // ── Game State ───────────────────────────────────────────────────────
@@ -118,6 +141,11 @@ export interface GameState {
     currentRound: number;     // 1-based
     phaseFrames: number;      // frames elapsed in current phase
     hitStop: number;          // global hit-stop counter (frames)
+    matchStats: {
+        hits: [number, number];
+        damage: [number, number];
+        maxCombo: [number, number];
+    };
 }
 
 // ── Input ────────────────────────────────────────────────────────────
@@ -142,6 +170,6 @@ export type ServerMsg =
     | { type: 'opponent_joined' }
     | { type: 'fight_start'; playerIndex: 0 | 1; p1CharId: string; p2CharId: string }
     | { type: 'opponent_selected' }
-    | { type: 'state_update'; state: GameState; frame: number }
+    | { type: 'state_update'; state: GameState; frame: number; events?: GameEvent[] }
     | { type: 'opponent_disconnected' }
     | { type: 'error'; message: string };

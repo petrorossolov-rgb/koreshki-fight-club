@@ -55,6 +55,8 @@ describe('Type compatibility (compile-time checks)', () => {
             frameInState: 0, currentMove: null,
             hitConfirmed: false, stunDuration: 0,
             hitStopFrames: 0, roundWins: 0,
+            comboCount: 0, comboDamage: 0,
+            specialCooldown: 0, isCrouching: false,
         };
         expect(state.hp).toBe(1000);
     });
@@ -67,6 +69,8 @@ describe('Type compatibility (compile-time checks)', () => {
             frameInState: 0, currentMove: null,
             hitConfirmed: false, stunDuration: 0,
             hitStopFrames: 0, roundWins: 0,
+            comboCount: 0, comboDamage: 0,
+            specialCooldown: 0, isCrouching: false,
         };
         const gs: GameState = {
             fighters: [fighter, { ...fighter, facingRight: false }],
@@ -75,6 +79,7 @@ describe('Type compatibility (compile-time checks)', () => {
             currentRound: 1,
             phaseFrames: 0,
             hitStop: 0,
+            matchStats: { hits: [0, 0], damage: [0, 0], maxCombo: [0, 0] },
         };
         expect(gs.fighters).toHaveLength(2);
     });

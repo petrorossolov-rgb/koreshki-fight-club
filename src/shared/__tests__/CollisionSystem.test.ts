@@ -11,6 +11,8 @@ function makeFighter(overrides: Partial<FighterState> = {}): FighterState {
         frameInState: 0, currentMove: null,
         hitConfirmed: false, stunDuration: 0,
         hitStopFrames: 0, roundWins: 0,
+        comboCount: 0, comboDamage: 0,
+        specialCooldown: 0, isCrouching: false,
         ...overrides,
     };
 }
