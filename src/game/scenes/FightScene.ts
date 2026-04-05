@@ -8,6 +8,8 @@ import { InputManager, NetworkSource } from '@game/systems/InputManager';
 import { HealthBar } from '@game/ui/HealthBar';
 import { RoundDisplay } from '@game/ui/RoundDisplay';
 import { HitSpark } from '@game/ui/HitSpark';
+import { ComboCounter } from '@game/ui/ComboCounter';
+import { CooldownIndicator } from '@game/ui/CooldownIndicator';
 import { NetworkClient } from '@game/net/NetworkClient';
 
 export interface FightSceneData {
@@ -25,6 +27,8 @@ export class FightScene extends Scene {
     private healthBars!: [HealthBar, HealthBar];
     private roundDisplay!: RoundDisplay;
     private hitSpark!: HitSpark;
+    private comboCounters!: [ComboCounter, ComboCounter];
+    private cooldownIndicators!: [CooldownIndicator, CooldownIndicator];
     private accumulator = 0;
 
     // Config state
@@ -36,6 +40,7 @@ export class FightScene extends Scene {
     private networkClient: NetworkClient | null = null;
     private localPlayerIndex: 0 | 1 = 0;
     private remoteState: GameState | null = null;
+    private remoteEvents: GameEvent[] = [];
 
     constructor() {
         super('FightScene');
@@ -82,6 +87,14 @@ export class FightScene extends Scene {
         ];
         this.roundDisplay = new RoundDisplay(this);
         this.hitSpark = new HitSpark(this);
+        this.comboCounters = [
+            new ComboCounter(this, 0),
+            new ComboCounter(this, 1),
+        ];
+        this.cooldownIndicators = [
+            new CooldownIndicator(this, 0),
+            new CooldownIndicator(this, 1),
+        ];
 
         this.accumulator = 0;
     }
@@ -110,8 +123,15 @@ export class FightScene extends Scene {
             this.accumulator -= FIXED_DT;
         }
 
-        // Process visual effects from engine events
-        this.processEvents(this.engine.events);
+        // Process visual effects — use server events in online mode to avoid double effects
+        if (this.mode === 'online') {
+            if (this.remoteEvents.length > 0) {
+                this.processEvents(this.remoteEvents);
+                this.remoteEvents = [];
+            }
+        } else {
+            this.processEvents(this.engine.events);
+        }
 
         const { fighters, roundPhase, roundTimer, hitStop } = this.engine.state;
 
@@ -130,6 +150,16 @@ export class FightScene extends Scene {
             fighters[1].roundWins,
         ]);
 
+        // Combo counters
+        this.comboCounters[0].update(this, fighters[0].comboCount, fighters[0].comboDamage);
+        this.comboCounters[1].update(this, fighters[1].comboCount, fighters[1].comboDamage);
+
+        // Cooldown indicators
+        const p1CdFrames = this.p1Config.specialCooldownFrames ?? 0;
+        const p2CdFrames = this.p2Config.specialCooldownFrames ?? 0;
+        this.cooldownIndicators[0].update(this, fighters[0].specialCooldown, p1CdFrames);
+        this.cooldownIndicators[1].update(this, fighters[1].specialCooldown, p2CdFrames);
+
         // Transition to GameOver on match end
         if (roundPhase === RoundPhase.MatchEnd) {
             this.cleanupNetwork();
@@ -147,8 +177,9 @@ export class FightScene extends Scene {
     private setupNetworkCallbacks(): void {
         if (!this.networkClient) return;
 
-        this.networkClient.callbacks.onStateUpdate = (state: GameState, _frame: number) => {
+        this.networkClient.callbacks.onStateUpdate = (state: GameState, _frame: number, events?: GameEvent[]) => {
             this.remoteState = state;
+            if (events) this.remoteEvents = events;
         };
 
         this.networkClient.callbacks.onOpponentDisconnected = () => {
@@ -178,6 +209,10 @@ export class FightScene extends Scene {
             local.stunDuration = remote.stunDuration;
             local.hitStopFrames = remote.hitStopFrames;
             local.roundWins = remote.roundWins;
+            local.comboCount = remote.comboCount;
+            local.comboDamage = remote.comboDamage;
+            local.specialCooldown = remote.specialCooldown;
+            local.isCrouching = remote.isCrouching;
         }
         state.roundPhase = serverState.roundPhase;
         state.roundTimer = serverState.roundTimer;

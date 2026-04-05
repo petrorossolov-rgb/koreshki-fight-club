@@ -1,4 +1,4 @@
-import type { ClientMsg, ServerMsg, GameState } from '@shared/types';
+import type { ClientMsg, ServerMsg, GameState, GameEvent } from '@shared/types';
 
 // ── Connection States ──────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ export interface NetworkCallbacks {
     onOpponentJoined?: () => void;
     onOpponentSelected?: () => void;
     onFightStart?: (playerIndex: 0 | 1, p1CharId: string, p2CharId: string) => void;
-    onStateUpdate?: (state: GameState, frame: number) => void;
+    onStateUpdate?: (state: GameState, frame: number, events?: GameEvent[]) => void;
     onOpponentDisconnected?: () => void;
     onError?: (message: string) => void;
 }
@@ -132,7 +132,7 @@ export class NetworkClient {
                 break;
 
             case 'state_update':
-                this.callbacks.onStateUpdate?.(msg.state, msg.frame);
+                this.callbacks.onStateUpdate?.(msg.state, msg.frame, msg.events);
                 break;
 
             case 'opponent_disconnected':
