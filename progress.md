@@ -7,7 +7,7 @@
 - **Spritesheet layout**: combined sheet with 11 columns (max frames per row), 126x126 frame size. Row * 11 = first frame index of that animation
 - **FSM key format**: `"topState/subState"` e.g. `"grounded/idle"`, `"airborne/jump"`
 - **Physics are pure functions**: no classes, no side effects beyond mutating the passed FighterState
-- **Fighter sprite origin**: `(0.5, 1)` — bottom-center for floor alignment at FLOOR_Y
+- **Fighter sprite origin**: `(0.5, FEET_ORIGIN_Y)` where `FEET_ORIGIN_Y = 82/126` — origin at measured feet pixel (y=81 in 126px frame). Scaling around origin keeps feet aligned at any scale.
 - **Animation key prefix**: `{configId}_p{playerIndex}_` avoids collisions when two fighters share a spritesheet
 - **Engine step order**: phaseFrames++ → (phase switch) → FSM tick → gravity → velocity → clampToStage → pushbox → autoFace → processHits → timer
 - **Hit detection timing**: frameInState is incremented by tickFSM BEFORE processHits runs — active frames start at frameInState=startup (1-indexed after tickFSM)
@@ -608,3 +608,29 @@
 - **Drift items resolved**: 5
 - **Remaining debt**: 0
 - **Baseline commit**: e015f32
+
+## [2026-04-05] — CHANGE: Keyboard controls hint overlay
+- **Status**: ✅ Done
+- **Files changed**: src/game/scenes/FightScene.ts
+- **Learnings**: permanent hints preferred over timed fade-out
+
+## [2026-04-05] — INCIDENT: Fighter feet misaligned at different scales
+- **Symptom**: fighters of different scale categories had feet at different vertical positions
+- **Root cause**: sprite origin (0.5, 1) placed bottom of 126px frame at FLOOR_Y, but 44px of bottom padding scaled differently per character. Manual groundOffset values and formula-based compensation both failed because the padding value (25px) was wrong.
+- **Fix**: measured actual feet pixel (y=81) via PNG analysis, set `FEET_ORIGIN_Y = 82/126`. Scaling around origin auto-aligns feet.
+- **Prevention**: always measure sprite metrics from actual pixel data, never estimate visually
+- **Time to resolve**: 4 attempts — manual offsets → formula → origin with wrong value → origin with measured value
+
+## [2026-04-05] — INCIDENT: Touch controls missing when joining online game as P2
+- **Symptom**: joystick not appearing when joining a friend's game from phone
+- **Root cause**: InputManager always creates TouchSource at index 0. When joining as playerIndex 1, FightScene replaced sources[0] (remote) with NetworkSource, destroying the TouchSource and its DOM joystick. Local player (index 1) had no touch controls.
+- **Fix**: after replacing remote source, recreate TouchSource at localPlayerIndex if touch device and playerIndex === 1
+- **Prevention**: test online mode from both creator and joiner perspectives on mobile
+- **Time to resolve**: 1 attempt
+
+## [2026-04-05] — SYNC: Documentation synchronized
+- **Documents updated**: CLAUDE.md, progress.md
+- **Drift items found**: 3
+- **Drift items resolved**: 3
+- **Remaining debt**: 0
+- **Baseline commit**: f63c093

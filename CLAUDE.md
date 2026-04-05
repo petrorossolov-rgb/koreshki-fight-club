@@ -37,7 +37,7 @@ vite/           — Vite build configs
 src/shared/          — pure logic (types, constants, physics, engine), zero platform imports
 src/game/            — Phaser client (scenes, entities, UI, input, networking)
 src/game/scenes/     — Phaser scenes (Boot, Preloader, MainMenu, CharacterSelect, FightScene, GameOver)
-src/game/entities/   — visual wrappers + FSM (Fighter, FighterFSM)
+src/game/entities/   — visual wrappers (Fighter)
 src/game/systems/    — InputManager, SoundManager
 src/game/ui/         — HUD elements (HealthBar, RoundDisplay, TouchControls, ComboCounter, CooldownIndicator, HitSpark)
 src/game/net/        — NetworkClient (WebSocket wrapper)
