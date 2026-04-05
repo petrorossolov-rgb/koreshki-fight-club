@@ -213,26 +213,14 @@ export class FightScene extends Scene {
             align: 'left',
         };
 
-        const p1Text = this.add.text(12, height - 12,
+        this.add.text(12, height - 12,
             'P1: WASD — move  Q — punch  E — kick', style)
             .setOrigin(0, 1).setAlpha(0.5).setDepth(900);
 
-        const p2Text = this.add.text(width - 12, height - 12,
+        this.add.text(width - 12, height - 12,
             'P2: Arrows — move  J — punch  K — kick',
             { ...style, align: 'right' })
             .setOrigin(1, 1).setAlpha(0.5).setDepth(900);
-
-        this.time.delayedCall(5000, () => {
-            this.tweens.add({
-                targets: [p1Text, p2Text],
-                alpha: 0,
-                duration: 500,
-                onComplete: () => {
-                    p1Text.destroy();
-                    p2Text.destroy();
-                },
-            });
-        });
     }
 
     private setupNetworkCallbacks(): void {
