@@ -287,7 +287,10 @@ export class MainMenu extends Scene {
 
         bg.on('pointerover', () => { bg.fillColor = 0x555577; });
         bg.on('pointerout', () => { bg.fillColor = 0x333355; });
-        bg.on('pointerdown', onClick);
+        bg.on('pointerdown', () => {
+            this.soundManager.play('ui_select');
+            onClick();
+        });
 
         this.uiContainer.add([bg, text]);
     }

@@ -1,7 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import type { CharacterConfig } from '@shared/types';
 import type { NetworkClient } from '@game/net/NetworkClient';
-import type { SoundManager } from '@game/systems/SoundManager';
+import { SoundManager } from '@game/systems/SoundManager';
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -91,6 +91,9 @@ export class CharacterSelect extends Scene {
     // Random cycling state
     private isRandomCycling = false;
 
+    // Sound
+    private soundManager: SoundManager | null = null;
+
     constructor() {
         super('CharacterSelect');
     }
@@ -107,6 +110,8 @@ export class CharacterSelect extends Scene {
         this.lockedChoices = [null, null];
         this.waitingForOpponent = false;
         this.isRandomCycling = false;
+        this.soundManager = data?.soundManager ?? null;
+        if (this.soundManager) this.soundManager.transferTo(this);
     }
 
     create(): void {
@@ -374,6 +379,7 @@ export class CharacterSelect extends Scene {
 
     private onConfirm(): void {
         if (this.selectedIndex < 0) return;
+        this.soundManager?.play('ui_confirm');
         const entry = this.entries[this.selectedIndex];
 
         if (this.data_.mode === 'local') {
@@ -571,6 +577,7 @@ export class CharacterSelect extends Scene {
 
     private applySelection(index: number): void {
         this.selectedIndex = index;
+        this.soundManager?.play('ui_select');
 
         // Update highlight
         if (this.highlightBorder) this.highlightBorder.destroy();
