@@ -8,18 +8,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
-      - uses: denoland/deployctl@v1
+      - uses: denoland/setup-deno@v2
         with:
-          project: koreshki-fight-club
-          entrypoint: server/main.ts
-          include: |
-            server
-            src/shared
-            public/data
+          deno-version: v2.x
+
+      - run: deno install --global -Arf jsr:@deno/deployctl
+
+      - run: deployctl deploy --project=koreshki-fight-club --entrypoint=server/main.ts --include=server,src/shared,public/data
         env:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
