@@ -129,6 +129,11 @@ export class FightScene extends Scene {
         if (this.mode === 'local' && !isTouchDevice()) {
             this.showControlsHint();
         }
+
+        // Clean up DOM touch controls when leaving the scene
+        this.events.on('shutdown', () => {
+            this.inputManager.destroy();
+        });
     }
 
     update(_time: number, delta: number): void {
