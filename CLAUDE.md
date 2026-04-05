@@ -68,6 +68,7 @@ cd server && deno test --allow-read --config deno.json  # run server tests
 node scripts/gen-characters.mjs  # regenerate 17 character JSON configs
 node scripts/gen-audio.mjs       # regenerate procedural WAV sound effects
 node scripts/gen-bg.mjs          # regenerate fight scene background
+node scripts/gen-logo.mjs        # regenerate game logo
 ```
 
 ## Phases
