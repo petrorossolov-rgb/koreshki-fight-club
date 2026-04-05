@@ -1,4 +1,4 @@
-import type { CharacterConfig, GameState } from "@shared/types.ts";
+import type { CharacterConfig, GameEvent, GameState } from "@shared/types.ts";
 import { FIXED_DT } from "@shared/constants.ts";
 import { createFightEngine } from "@shared/FightEngine.ts";
 import type { Room } from "./RoomManager.ts";
@@ -32,7 +32,7 @@ export function startGameRoom(room: Room, p1Config: CharacterConfig, p2Config: C
 
     // Broadcast state at ~20Hz
     if (grState.frameCount % STATE_BROADCAST_INTERVAL === 0) {
-      broadcastState(room, engine.state, grState.frameCount);
+      broadcastState(room, engine.state, grState.frameCount, engine.events);
     }
   }, FIXED_DT) as unknown as number;
 
@@ -56,8 +56,8 @@ export function stopGameRoom(grState: GameRoomState): void {
   }
 }
 
-function broadcastState(room: Room, state: GameState, frame: number): void {
-  const msg = { type: "state_update" as const, state, frame };
+function broadcastState(room: Room, state: GameState, frame: number, events: GameEvent[]): void {
+  const msg = { type: "state_update" as const, state, frame, events };
   if (room.players[0]) sendMsg(room.players[0], msg);
   if (room.players[1]) sendMsg(room.players[1], msg);
 }

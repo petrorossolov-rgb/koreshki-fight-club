@@ -1,4 +1,4 @@
-import { assertEquals, assertNotEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals, assertExists, assertNotEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { startGameRoom, stopGameRoom } from "../GameRoom.ts";
 import type { Room } from "../RoomManager.ts";
 
@@ -150,6 +150,12 @@ Deno.test("game loop increments frameCount and broadcasts state", async () => {
     .map((m) => JSON.parse(m))
     .filter((m: Record<string, unknown>) => m.type === "state_update");
   assertEquals(stateUpdates1.length, stateUpdates2.length);
+
+  // state_update messages should include events array
+  for (const update of stateUpdates1) {
+    assertExists(update.events);
+    assertEquals(Array.isArray(update.events), true);
+  }
 
   stopGameRoom(grState);
 });
