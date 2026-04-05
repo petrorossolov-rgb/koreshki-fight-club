@@ -595,6 +595,13 @@
 - **Prevention**: After setting server URL, always verify with a health check (`curl https://server/health`) before deploying client. Document the exact production URL in deploy docs.
 - **Time to resolve**: 1 cycle (WebFetch confirmed TLS error, user provided correct URL)
 
+## [2026-04-05] — INCIDENT: Room code screen instantly replaced by CharacterSelect
+- **Symptom**: CREATE ROOM shows no room code or invite link — user goes straight to fighter select with "Ожидание соперника..."
+- **Root cause**: Server sends `room_created` + `room_joined` back-to-back to creator. `onRoomJoined` navigated to CharacterSelect for both creator and joiner, instantly overwriting the room code view.
+- **Fix**: `onRoomJoined` now checks `this.view === 'create'` — if creator is already showing room code, skip navigation. Only `onOpponentJoined` triggers transition for the creator.
+- **Prevention**: Server protocol test should verify that creator stays on waiting screen after receiving both messages. Consider separating creator/joiner callback logic explicitly.
+- **Time to resolve**: 1 cycle
+
 ## [2026-04-05] — SYNC: Documentation synchronized
 - **Documents updated**: CLAUDE.md, docs/plan-phase3.md
 - **Drift items found**: 5
