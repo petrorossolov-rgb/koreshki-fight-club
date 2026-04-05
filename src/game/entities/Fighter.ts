@@ -11,6 +11,7 @@ const STATE_TO_ANIM: Record<string, string> = {
     'grounded/crouch': 'crouch',
     'airborne/jump': 'jump',
     'airborne/fall': 'fall',
+    'airborne/attack': 'attack',
 };
 
 export class Fighter {

@@ -58,6 +58,22 @@ describe('clampToStage', () => {
         expect(f.subState).toBe('idle');
     });
 
+    it('clears currentMove and hitConfirmed on landing (T05)', () => {
+        const f = makeFighter({
+            y: FLOOR_Y + 10,
+            velY: 5,
+            topState: TopState.Airborne,
+            subState: 'attack',
+            currentMove: 'jumpPunch',
+            hitConfirmed: true,
+        });
+        clampToStage(f, pushbox);
+        expect(f.topState).toBe(TopState.Grounded);
+        expect(f.subState).toBe('idle');
+        expect(f.currentMove).toBeNull();
+        expect(f.hitConfirmed).toBe(false);
+    });
+
     it('clamps to left stage edge', () => {
         const f = makeFighter({ x: 10 });
         clampToStage(f, pushbox);

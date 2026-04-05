@@ -28,6 +28,9 @@ export function clampToStage(f: FighterState, pushbox: AABB): void {
         f.y = FLOOR_Y;
         f.velY = 0;
         if (f.topState === TopState.Airborne) {
+            // Clear move state — bypasses FSM exit(), so manual cleanup needed
+            f.currentMove = null;
+            f.hitConfirmed = false;
             f.topState = TopState.Grounded;
             f.subState = 'idle';
             f.frameInState = 0;
