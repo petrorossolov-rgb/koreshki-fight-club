@@ -573,3 +573,10 @@
 - **Fix**: (1) Added punch/kick/special animation entries using different frame subsets (punch: 44-47 fast, kick: 47-50, special: 44-50 slow). Updated `syncToState` to check `currentMove`. Regenerated 18 configs. (2) Created `scripts/gen-audio.mjs` for procedural WAV generation. Replaced all 11 files.
 - **Prevention**: Config validation should check move keys have matching animations. Audio tests should verify WAV file sizes.
 - **Time to resolve**: 1 diagnosis + 1 fix cycle
+
+## [2026-04-05] — INCIDENT: Kick animation shows dot artifact
+- **Symptom**: Small dot appears in front of player during kick (K) attack
+- **Root cause**: Kick animation started at frame 47, which is a transition frame containing only the sword tip (swoosh trail endpoint). Rendered as a tiny dot before transitioning to the next full-body frame.
+- **Fix**: Changed frame ranges — punch: 44-48 @20fps (fast), kick: 44-50 @12fps (slower/heavier). Both now start from full-body frames. All 18 configs regenerated.
+- **Prevention**: Always visually inspect spritesheet frames before setting animation ranges. Avoid using mid-animation transition frames as start frames.
+- **Time to resolve**: 1 cycle (spritesheet visual inspection identified the cause immediately)
