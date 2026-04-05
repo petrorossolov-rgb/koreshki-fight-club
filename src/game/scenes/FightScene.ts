@@ -4,7 +4,7 @@ import { RoundPhase } from '@shared/types';
 import { FIXED_DT, FLOOR_Y, STAGE_WIDTH, STAGE_HEIGHT } from '@shared/constants';
 import { createFightEngine, type FightEngine } from '@shared/FightEngine';
 import { Fighter } from '@game/entities/Fighter';
-import { InputManager, NetworkSource } from '@game/systems/InputManager';
+import { InputManager, NetworkSource, TouchSource } from '@game/systems/InputManager';
 import { isTouchDevice } from '@game/ui/TouchControls';
 import { HealthBar } from '@game/ui/HealthBar';
 import { RoundDisplay } from '@game/ui/RoundDisplay';
@@ -100,6 +100,11 @@ export class FightScene extends Scene {
         if (this.mode === 'online' && this.networkClient) {
             const remoteIndex = this.localPlayerIndex === 0 ? 1 : 0;
             this.inputManager.setSource(remoteIndex, new NetworkSource());
+            // On touch devices, InputManager creates TouchSource at index 0.
+            // If local player is index 1, the TouchSource was just destroyed — recreate it.
+            if (isTouchDevice() && this.localPlayerIndex === 1) {
+                this.inputManager.setSource(1, new TouchSource());
+            }
             this.setupNetworkCallbacks();
         }
 
