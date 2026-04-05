@@ -9,6 +9,7 @@ const STATE_TO_ANIM: Record<string, string> = {
     'grounded/walkForward': 'run',
     'grounded/walkBackward': 'run',
     'grounded/crouch': 'crouch',
+    'grounded/attack': 'attack',
     'airborne/jump': 'jump',
     'airborne/fall': 'fall',
     'airborne/attack': 'attack',

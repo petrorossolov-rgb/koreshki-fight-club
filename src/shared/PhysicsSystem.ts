@@ -2,9 +2,9 @@ import { TopState } from './types';
 import type { FighterState, AABB } from './types';
 import { GRAVITY, FLOOR_Y, STAGE_WIDTH } from './constants';
 
-/** Apply gravity to an airborne fighter. */
+/** Apply gravity to any non-grounded fighter (airborne, hitstun, knockdown, etc.). */
 export function applyGravity(f: FighterState): void {
-    if (f.topState === TopState.Airborne) {
+    if (f.topState !== TopState.Grounded && f.topState !== TopState.Blockstun) {
         f.velY += GRAVITY;
     }
 }
