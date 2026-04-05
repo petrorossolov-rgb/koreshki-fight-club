@@ -4,9 +4,9 @@ import type { CharacterConfig, FighterState } from '@shared/types';
 const SHARED_TEXTURE = 'martial-hero';
 
 // Origin Y placed at the character's feet within the 126px frame.
-// Feet are at ~96px from top → 96/126 ≈ 0.76.
+// Measured: lowest non-transparent pixel is at y=81 → (81+1)/126 ≈ 0.651.
 // Scaling happens around origin, so feet stay pinned to state.y at any scale.
-const FEET_ORIGIN_Y = 0.76;
+const FEET_ORIGIN_Y = 82 / 126;
 
 /** Map FSM state keys to animation config keys. */
 const STATE_TO_ANIM: Record<string, string> = {
