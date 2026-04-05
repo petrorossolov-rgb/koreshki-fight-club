@@ -580,3 +580,10 @@
 - **Fix**: Changed frame ranges — punch: 44-48 @20fps (fast), kick: 44-50 @12fps (slower/heavier). Both now start from full-body frames. All 18 configs regenerated.
 - **Prevention**: Always visually inspect spritesheet frames before setting animation ranges. Avoid using mid-animation transition frames as start frames.
 - **Time to resolve**: 1 cycle (spritesheet visual inspection identified the cause immediately)
+
+## [2026-04-05] — INCIDENT: No visible floor, fighters floating in sky
+- **Symptom**: FightScene shows solid blue gradient sky, no ground, fighters appear to float
+- **Root cause**: `bg.png` was a placeholder sky-only gradient (no ground art). FightScene had no programmatic floor either. Fighter foot alignment is correct (both at FLOOR_Y=520 with origin 0.5,1) but invisible without ground.
+- **Fix**: (1) Generated proper bg.png with dark sky gradient + brown ground + horizon line via `scripts/gen-bg.mjs`. (2) Added brown ground rectangle + floor line at FLOOR_Y in FightScene.create().
+- **Prevention**: Visual assets should be validated during asset generation tasks (T11/T12), not deferred to deploy.
+- **Time to resolve**: 1 cycle
