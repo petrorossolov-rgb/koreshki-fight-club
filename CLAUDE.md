@@ -55,6 +55,8 @@ public/assets/       — sprites, sounds, images
 - **Fixed timestep** — all game logic at 60 FPS via accumulator pattern: `while (accum >= FIXED_DT) { step(); accum -= FIXED_DT; }`
 - **Input bits** — `InputBit` const enum with bitflags, packed into a single number per frame
 - **Shared code** — `src/shared/` must have zero Phaser/Deno/DOM imports (pure TypeScript only)
+- **iOS Safari** — viewport meta needs `viewport-fit=cover, user-scalable=no`. CSS uses `100dvh` (not `100vh`), `safe-area-inset-*` padding for notch devices. Fullscreen API requires `webkit` prefix. Pinch-to-zoom blocked via CSS `touch-action: none` + JS `gesturestart` preventDefault.
+- **InputManager cleanup** — `InputManager.destroy()` removes DOM overlays (nipplejs joystick) and event listeners. FightScene calls this on `shutdown` event to prevent stale DOM elements on scene transitions.
 
 ## Commands
 

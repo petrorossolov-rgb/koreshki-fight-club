@@ -23,6 +23,8 @@
 - **Sprite orientation**: Martial Hero spritesheet faces LEFT by default. `setFlipX(state.facingRight)` — flip when facing right, default when facing left.
 - **Phaser setPath scope**: `setPath('assets')` applies to ALL subsequent loads. Reset with `setPath('')` before loading assets outside the `assets/` directory.
 - **SoundManager ownership**: MainMenu creates, passes via scene data to CharacterSelect → FightScene. Each scene calls `transferTo(this)` to update the internal scene ref.
+- **InputManager cleanup**: TouchSource creates DOM overlays (nipplejs joystick). `InputManager.destroy()` must be called on scene shutdown to remove DOM elements. Failure leaves stale joystick visible on subsequent scenes.
+- **iOS Safari**: viewport meta needs `viewport-fit=cover, user-scalable=no`. CSS: `100dvh` height, `safe-area-inset-*` padding. Fullscreen API: webkit prefix. Pinch-to-zoom blocked via `touch-action: none` + `gesturestart` preventDefault.
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -641,3 +643,10 @@
 - **Drift items resolved**: 3
 - **Remaining debt**: 0
 - **Baseline commit**: f63c093
+
+## [2026-04-05] — SYNC: Documentation synchronized
+- **Documents updated**: CLAUDE.md, progress.md
+- **Drift items found**: 3
+- **Drift items resolved**: 3
+- **Remaining debt**: 0
+- **Baseline commit**: 94d0023
