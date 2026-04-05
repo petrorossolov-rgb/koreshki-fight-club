@@ -196,6 +196,12 @@ export class FightScene extends Scene {
                     break;
                 case 'ko':
                     cam.shake(300, 0.02);
+                    if (this.mode === 'local') {
+                        this.time.timeScale = 0.3;
+                        this.time.delayedCall(1000, () => {
+                            this.time.timeScale = 1.0;
+                        });
+                    }
                     break;
                 case 'special_used':
                     cam.shake(200, 0.01);
