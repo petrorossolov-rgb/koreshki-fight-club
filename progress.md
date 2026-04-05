@@ -560,3 +560,9 @@
 - **Files changed**: none (verification only)
 - **Learnings**: All 8 mobile features verified in code: touch P+K, audio autoplay (handled by Phaser WebAudioSoundManager automatically), mute button, invite link flow, mobile room code DOM overlay, auto-reconnect with overlay UI, combo counter, cooldown indicator. Physical device testing remains for the user.
 - **Patterns**: Phaser 3 WebAudioSoundManager auto-unlocks AudioContext on first user gesture — no manual `resume()` needed.
+
+## [2026-04-05] — [T35] Deploy + update docs
+- **Status**: ✅ Done
+- **Files changed**: `docs/deploy.md`, `docs/testing-checklist.md`
+- **Learnings**: `CLIENT_URL` env var needed for `/join/:code` invite redirect on server. GitHub Actions deploy triggers automatically on push to main.
+- **Patterns**: none
