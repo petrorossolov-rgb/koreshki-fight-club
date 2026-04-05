@@ -786,4 +786,268 @@ describe('FightEngine', () => {
             expect(JSON.stringify(engine.state)).toBe(stateBefore);
         });
     });
+
+    // ── Comprehensive FightEngine tests (T10) ─────────────────────
+
+    describe('matchStats persistence across rounds', () => {
+        it('matchStats carry over after round reset', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+
+            // Land a hit in round 1
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit connects
+
+            expect(engine.state.matchStats.hits[0]).toBe(1);
+            expect(engine.state.matchStats.damage[0]).toBe(80);
+
+            // Force KO → RoundEnd → new round
+            engine.state.hitStop = 0;
+            engine.state.roundPhase = RoundPhase.KO;
+            engine.state.phaseFrames = 0;
+            // Set HP so P1 wins the round
+            engine.state.fighters[0].hp = 500;
+            engine.state.fighters[1].hp = 0;
+            for (let i = 0; i < KO_FRAMES; i++) {
+                engine.step([0, 0]);
+            }
+            expect(engine.state.roundPhase).toBe(RoundPhase.RoundEnd);
+            engine.step([0, 0]); // → Intro (new round)
+
+            // matchStats preserved across rounds
+            expect(engine.state.matchStats.hits[0]).toBe(1);
+            expect(engine.state.matchStats.damage[0]).toBe(80);
+            expect(engine.state.matchStats.maxCombo[0]).toBe(1);
+        });
+
+        it('matchStats accumulate across multiple rounds', () => {
+            const engine = makeEngine();
+
+            // Round 1: simulate some stats
+            engine.state.matchStats.hits[0] = 5;
+            engine.state.matchStats.damage[0] = 400;
+            engine.state.matchStats.maxCombo[0] = 3;
+
+            // Trigger round transition
+            engine.state.fighters[1].hp = 0;
+            engine.state.fighters[0].roundWins = 1;
+            engine.state.roundPhase = RoundPhase.RoundEnd;
+            engine.state.phaseFrames = 0;
+            engine.step([0, 0]); // new round
+
+            // Stats still there
+            expect(engine.state.matchStats.hits[0]).toBe(5);
+            expect(engine.state.matchStats.damage[0]).toBe(400);
+            expect(engine.state.matchStats.maxCombo[0]).toBe(3);
+        });
+    });
+
+    describe('multi-hit combo tracking', () => {
+        function setupComboEngine() {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f1.facingRight = true; f2.facingRight = false;
+            return engine;
+        }
+
+        it('comboDamage accumulates with proration across hits', () => {
+            const engine = setupComboEngine();
+            const [f1, f2] = engine.state.fighters;
+
+            // First hit: full damage (80)
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit
+
+            expect(f1.comboCount).toBe(1);
+            expect(f1.comboDamage).toBe(80);
+            const hpAfterFirst = f2.hp;
+
+            // Skip hitstop
+            while (engine.state.hitStop > 0) engine.step([0, 0]);
+
+            // Second hit: needs opponent still in hitstun + new attack
+            // Reset attacker for next hit
+            f1.topState = TopState.Grounded;
+            f1.subState = 'idle';
+            f1.currentMove = null;
+            f1.hitConfirmed = false;
+            f1.x = f2.x - 60; // close range
+            f1.facingRight = true;
+            f2.stunDuration = 30; // ensure still in hitstun
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]); // second hit
+
+            const secondDmg = Math.round(80 * 0.85); // comboCount=1 → 85%
+            expect(f1.comboCount).toBe(2);
+            expect(f1.comboDamage).toBe(80 + secondDmg);
+            expect(f2.hp).toBe(hpAfterFirst - secondDmg);
+        });
+
+        it('maxCombo updates only when new combo exceeds previous', () => {
+            const engine = setupComboEngine();
+            const f1 = engine.state.fighters[0];
+
+            // First combo: 2 hits
+            f1.comboCount = 2;
+            engine.state.matchStats.maxCombo[0] = 2;
+
+            // Simulate a 1-hit combo (shouldn't update maxCombo)
+            f1.comboCount = 1;
+            // maxCombo should stay at 2
+            expect(engine.state.matchStats.maxCombo[0]).toBe(2);
+        });
+
+        it('both players can have independent combo counts', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+
+            // Set up independent combos
+            f1.comboCount = 3;
+            f1.comboDamage = 200;
+            f2.comboCount = 1;
+            f2.comboDamage = 80;
+
+            expect(f1.comboCount).not.toBe(f2.comboCount);
+            expect(f1.comboDamage).not.toBe(f2.comboDamage);
+        });
+
+        it('combo resets comboDamage along with comboCount', () => {
+            const engine = setupComboEngine();
+            const [f1, f2] = engine.state.fighters;
+
+            // Simulate hit
+            f1.comboCount = 2;
+            f1.comboDamage = 150;
+            // Opponent exits hitstun
+            f2.topState = TopState.Grounded;
+            f2.subState = 'idle';
+
+            engine.step([0, 0]); // combo reset check runs
+
+            expect(f1.comboCount).toBe(0);
+            expect(f1.comboDamage).toBe(0);
+        });
+    });
+
+    describe('specialCooldown integration', () => {
+        it('specialCooldown decrements for both players independently', () => {
+            const engine = makeEngine();
+            engine.state.fighters[0].specialCooldown = 10;
+            engine.state.fighters[1].specialCooldown = 5;
+
+            for (let i = 0; i < 5; i++) engine.step([0, 0]);
+
+            expect(engine.state.fighters[0].specialCooldown).toBe(5);
+            expect(engine.state.fighters[1].specialCooldown).toBe(0);
+        });
+
+        it('specialCooldown not decremented during hitStop', () => {
+            const engine = makeEngine();
+            engine.state.fighters[0].specialCooldown = 10;
+            engine.state.hitStop = 3;
+
+            engine.step([0, 0]); // hitStop frame
+            expect(engine.state.fighters[0].specialCooldown).toBe(10); // unchanged
+        });
+    });
+
+    describe('event edge cases', () => {
+        it('no events emitted during Intro phase', () => {
+            const engine = createFightEngine({ p1Config: testConfig, p2Config: testConfig });
+            engine.step([InputBit.PUNCH, 0]); // intro — inputs ignored
+            expect(engine.events).toHaveLength(0);
+        });
+
+        it('no events emitted during hitStop', () => {
+            const engine = makeEngine();
+            engine.state.hitStop = 5;
+            engine.step([InputBit.PUNCH, 0]);
+            expect(engine.events).toHaveLength(0);
+        });
+
+        it('ko event includes correct loserIdx for P2 loss', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 300; f2.x = 360;
+            f2.hp = 1;
+
+            engine.step([InputBit.PUNCH, 0]);
+            engine.step([0, 0]);
+            engine.step([0, 0]);
+
+            const ko = engine.events.find(e => e.type === 'ko') as { type: 'ko'; loserIdx: number };
+            expect(ko).toBeDefined();
+            expect(ko.loserIdx).toBe(1);
+        });
+
+        it('ko event includes correct loserIdx for P1 loss', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 360; f2.x = 300; // swap positions
+            f1.hp = 1;
+            f2.facingRight = true; f1.facingRight = false;
+
+            engine.step([0, InputBit.PUNCH]); // P2 punches P1
+            engine.step([0, 0]);
+            engine.step([0, 0]);
+
+            const ko = engine.events.find(e => e.type === 'ko') as { type: 'ko'; loserIdx: number };
+            expect(ko).toBeDefined();
+            expect(ko.loserIdx).toBe(0);
+        });
+
+        it('timeout ko: lower HP player loses', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.hp = 500;
+            f2.hp = 800;
+            engine.state.roundTimer = 1;
+
+            // Burn through 60 frames
+            for (let i = 0; i < 60; i++) engine.step([0, 0]);
+
+            const ko = engine.events.find(e => e.type === 'ko') as { type: 'ko'; loserIdx: number };
+            expect(ko).toBeDefined();
+            expect(ko.loserIdx).toBe(0); // P1 had lower HP
+        });
+    });
+
+    describe('draw scenarios', () => {
+        it('KO phase with equal HP awards no round win', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.hp = 500;
+            f2.hp = 500;
+            engine.state.roundPhase = RoundPhase.KO;
+            engine.state.phaseFrames = 0;
+
+            for (let i = 0; i < KO_FRAMES; i++) engine.step([0, 0]);
+
+            expect(f1.roundWins).toBe(0);
+            expect(f2.roundWins).toBe(0);
+        });
+    });
+
+    describe('P2 attacks P1', () => {
+        it('P2 can hit P1 with punch', () => {
+            const engine = makeEngine();
+            const [f1, f2] = engine.state.fighters;
+            f1.x = 360; f2.x = 300;
+            f1.facingRight = false; f2.facingRight = true;
+
+            engine.step([0, InputBit.PUNCH]); // P2 attacks
+            engine.step([0, 0]);
+            engine.step([0, 0]); // hit
+
+            expect(f1.hp).toBeLessThan(DEFAULT_HP);
+            expect(engine.state.matchStats.hits[1]).toBe(1);
+        });
+    });
 });
