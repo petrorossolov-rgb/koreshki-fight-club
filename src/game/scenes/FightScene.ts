@@ -5,6 +5,7 @@ import { FIXED_DT, FLOOR_Y, STAGE_WIDTH, STAGE_HEIGHT } from '@shared/constants'
 import { createFightEngine, type FightEngine } from '@shared/FightEngine';
 import { Fighter } from '@game/entities/Fighter';
 import { InputManager, NetworkSource } from '@game/systems/InputManager';
+import { isTouchDevice } from '@game/ui/TouchControls';
 import { HealthBar } from '@game/ui/HealthBar';
 import { RoundDisplay } from '@game/ui/RoundDisplay';
 import { HitSpark } from '@game/ui/HitSpark';
@@ -118,6 +119,11 @@ export class FightScene extends Scene {
         ];
 
         this.accumulator = 0;
+
+        // Keyboard controls hint for desktop local mode
+        if (this.mode === 'local' && !isTouchDevice()) {
+            this.showControlsHint();
+        }
     }
 
     update(_time: number, delta: number): void {
@@ -197,6 +203,36 @@ export class FightScene extends Scene {
                 p2Config: this.p2Config,
             });
         }
+    }
+
+    private showControlsHint(): void {
+        const { width, height } = this.scale;
+        const style: Phaser.Types.GameObjects.Text.TextStyle = {
+            fontSize: '14px',
+            color: '#ffffff',
+            align: 'left',
+        };
+
+        const p1Text = this.add.text(12, height - 12,
+            'P1: WASD — move  Q — punch  E — kick', style)
+            .setOrigin(0, 1).setAlpha(0.5).setDepth(900);
+
+        const p2Text = this.add.text(width - 12, height - 12,
+            'P2: Arrows — move  J — punch  K — kick',
+            { ...style, align: 'right' })
+            .setOrigin(1, 1).setAlpha(0.5).setDepth(900);
+
+        this.time.delayedCall(5000, () => {
+            this.tweens.add({
+                targets: [p1Text, p2Text],
+                alpha: 0,
+                duration: 500,
+                onComplete: () => {
+                    p1Text.destroy();
+                    p2Text.destroy();
+                },
+            });
+        });
     }
 
     private setupNetworkCallbacks(): void {
