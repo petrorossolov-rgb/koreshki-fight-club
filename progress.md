@@ -588,6 +588,13 @@
 - **Prevention**: Visual assets should be validated during asset generation tasks (T11/T12), not deferred to deploy.
 - **Time to resolve**: 1 cycle
 
+## [2026-04-05] — INCIDENT: Online mode "Connection failed" — wrong server domain
+- **Symptom**: CREATE ROOM → "Connection failed". Kaspersky flags the connection as untrusted.
+- **Root cause**: `VITE_WS_URL` GitHub variable was set to `wss://...deno.dev/ws` but the actual Deno Deploy domain is `.deno.net`. TLS certificate `ERR_TLS_CERT_ALTNAME_INVALID` — the wildcard cert doesn't cover the wrong TLD.
+- **Fix**: Updated `VITE_WS_URL` to `wss://koreshki-fight-club.petrorossolov.deno.net/ws`. Triggered client rebuild.
+- **Prevention**: After setting server URL, always verify with a health check (`curl https://server/health`) before deploying client. Document the exact production URL in deploy docs.
+- **Time to resolve**: 1 cycle (WebFetch confirmed TLS error, user provided correct URL)
+
 ## [2026-04-05] — SYNC: Documentation synchronized
 - **Documents updated**: CLAUDE.md, docs/plan-phase3.md
 - **Drift items found**: 5
