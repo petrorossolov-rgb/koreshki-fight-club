@@ -33,6 +33,22 @@ function totalMoveFrames(move: MoveDef): number {
     return move.startup + move.active + move.recovery;
 }
 
+/** Check for air attack input and transition to airborne/attack if a move exists. */
+function tryAirAttack(f: FighterState, bits: number, cfg: CharacterConfig): boolean {
+    let moveKey: string | null = null;
+    if (has(bits, InputBit.PUNCH) && cfg.moves['jumpPunch']) {
+        moveKey = 'jumpPunch';
+    } else if (has(bits, InputBit.KICK) && cfg.moves['jumpKick']) {
+        moveKey = 'jumpKick';
+    }
+    if (moveKey) {
+        f.currentMove = moveKey;
+        transition(f, cfg, TopState.Airborne, 'attack');
+        return true;
+    }
+    return false;
+}
+
 /** Check for attack input and transition to grounded/attack if a move exists. */
 function tryAttack(f: FighterState, bits: number, cfg: CharacterConfig): boolean {
     let moveKey: string | null = null;
@@ -127,6 +143,22 @@ const crouch: StateHandler = {
         if (!has(bits, InputBit.DOWN)) {
             transition(f, cfg, TopState.Grounded, 'idle');
             return;
+        }
+        // Crouch attacks
+        let moveKey: string | null = null;
+        if (has(bits, InputBit.PUNCH) && has(bits, InputBit.KICK)
+            && cfg.moves['special'] && f.specialCooldown <= 0) {
+            moveKey = 'special';
+            f.specialCooldown = cfg.specialCooldownFrames ?? 300;
+        } else if (has(bits, InputBit.PUNCH) && cfg.moves['crouchPunch']) {
+            moveKey = 'crouchPunch';
+        } else if (has(bits, InputBit.KICK) && cfg.moves['crouchKick']) {
+            moveKey = 'crouchKick';
+        }
+        if (moveKey) {
+            f.isCrouching = true;
+            f.currentMove = moveKey;
+            transition(f, cfg, TopState.Grounded, 'attack');
         }
     },
     exit() {},
@@ -249,6 +281,9 @@ const jump: StateHandler = {
         f.velY = cfg.jumpVelY;
     },
     update(f, bits, cfg) {
+        // Jump attacks
+        if (tryAirAttack(f, bits, cfg)) return;
+
         // Horizontal air control
         const lr = (has(bits, InputBit.RIGHT) ? 1 : 0) - (has(bits, InputBit.LEFT) ? 1 : 0);
         f.velX = lr * cfg.walkSpeed * 0.8;
@@ -262,15 +297,42 @@ const jump: StateHandler = {
 
 const fall: StateHandler = {
     enter() {},
-    update(f, _bits, cfg) {
+    update(f, bits, cfg) {
+        // Jump attacks
+        if (tryAirAttack(f, bits, cfg)) return;
+
         // Horizontal air control
-        const lr = (has(_bits, InputBit.RIGHT) ? 1 : 0) - (has(_bits, InputBit.LEFT) ? 1 : 0);
+        const lr = (has(bits, InputBit.RIGHT) ? 1 : 0) - (has(bits, InputBit.LEFT) ? 1 : 0);
         f.velX = lr * cfg.walkSpeed * 0.8;
 
         // Landing is handled by clampToStage in PhysicsSystem
         // which sets topState=Grounded when y >= FLOOR_Y
     },
     exit() {},
+};
+
+const airborneAttack: StateHandler = {
+    enter() {
+        // Keep current velocity — don't zero velX
+    },
+    update(f, bits, cfg) {
+        // Air control during attack
+        const lr = (has(bits, InputBit.RIGHT) ? 1 : 0) - (has(bits, InputBit.LEFT) ? 1 : 0);
+        f.velX = lr * cfg.walkSpeed * 0.8;
+
+        const move = getMove(f, cfg);
+        if (!move) {
+            transition(f, cfg, TopState.Airborne, 'fall');
+            return;
+        }
+        if (f.frameInState >= totalMoveFrames(move)) {
+            transition(f, cfg, TopState.Airborne, 'fall');
+        }
+    },
+    exit(f) {
+        f.currentMove = null;
+        f.hitConfirmed = false;
+    },
 };
 
 // ── State map ───────────────────────────────────────────────────────
@@ -284,6 +346,7 @@ const stateMap: Record<string, StateHandler> = {
     'grounded/block': block,
     'airborne/jump': jump,
     'airborne/fall': fall,
+    'airborne/attack': airborneAttack,
     'hitstun/standing': hitstunStanding,
     'blockstun/standing': blockstunStanding,
     'knockdown/falling': knockdownFalling,

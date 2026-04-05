@@ -318,4 +318,137 @@ describe('FighterFSM', () => {
         expect(f.currentMove).toBe('punch');
         expect(f.frameInState).toBe(1); // 0 from chain reset, +1 from tickFSM increment
     });
+
+    // ── Crouch attacks (T04) ──────────────────────────────────────
+
+    const cfgWithCrouchMoves: CharacterConfig = {
+        ...cfgWithMoves,
+        moves: {
+            ...cfgWithMoves.moves,
+            crouchPunch: {
+                name: 'crouchPunch', damage: 50,
+                startup: 2, active: 2, recovery: 4,
+                hitbox: { x: 25, y: -20, width: 50, height: 20 },
+                knockbackX: 3, knockbackY: 0,
+                hitStunFrames: 10, blockStunFrames: 6,
+            },
+            crouchKick: {
+                name: 'crouchKick', damage: 70,
+                startup: 4, active: 3, recovery: 6,
+                hitbox: { x: 20, y: -15, width: 60, height: 25 },
+                knockbackX: 5, knockbackY: -1,
+                hitStunFrames: 14, blockStunFrames: 8,
+            },
+        },
+    };
+
+    it('crouch + PUNCH → crouchPunch attack', () => {
+        const f = makeFighter({ topState: TopState.Grounded, subState: 'crouch' });
+        tickFSM(f, InputBit.DOWN | InputBit.PUNCH, cfgWithCrouchMoves);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('crouchPunch');
+        expect(f.isCrouching).toBe(true);
+    });
+
+    it('crouch + KICK → crouchKick attack', () => {
+        const f = makeFighter({ topState: TopState.Grounded, subState: 'crouch' });
+        tickFSM(f, InputBit.DOWN | InputBit.KICK, cfgWithCrouchMoves);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('crouchKick');
+        expect(f.isCrouching).toBe(true);
+    });
+
+    it('crouch attack completes → returns to crouch (not idle)', () => {
+        const f = makeFighter({ topState: TopState.Grounded, subState: 'crouch' });
+        tickFSM(f, InputBit.DOWN | InputBit.PUNCH, cfgWithCrouchMoves); // enter attack, frame 1
+        const move = cfgWithCrouchMoves.moves['crouchPunch'];
+        const total = move.startup + move.active + move.recovery;
+        for (let i = 1; i < total; i++) {
+            tickFSM(f, 0, cfgWithCrouchMoves);
+        }
+        tickFSM(f, 0, cfgWithCrouchMoves); // completes
+        expect(f.subState).toBe('crouch');
+        expect(f.isCrouching).toBe(false); // cleared by attack.exit()
+    });
+
+    it('no crouch attack if crouchPunch not in config', () => {
+        const f = makeFighter({ topState: TopState.Grounded, subState: 'crouch' });
+        tickFSM(f, InputBit.DOWN | InputBit.PUNCH, cfgWithMoves); // no crouchPunch
+        expect(f.subState).toBe('crouch'); // stays in crouch
+    });
+
+    // ── Jump attacks (T05) ──────────────────────────────────────
+
+    const cfgWithJumpMoves: CharacterConfig = {
+        ...cfgWithMoves,
+        moves: {
+            ...cfgWithMoves.moves,
+            jumpPunch: {
+                name: 'jumpPunch', damage: 60,
+                startup: 2, active: 3, recovery: 3,
+                hitbox: { x: 25, y: -50, width: 50, height: 30 },
+                knockbackX: 3, knockbackY: -1,
+                hitStunFrames: 10, blockStunFrames: 6,
+            },
+            jumpKick: {
+                name: 'jumpKick', damage: 80,
+                startup: 3, active: 3, recovery: 4,
+                hitbox: { x: 20, y: -30, width: 55, height: 35 },
+                knockbackX: 4, knockbackY: 2,
+                hitStunFrames: 14, blockStunFrames: 8,
+            },
+        },
+    };
+
+    it('jump + PUNCH → airborne/attack with jumpPunch', () => {
+        const f = makeFighter({ topState: TopState.Airborne, subState: 'jump', velY: -8 });
+        tickFSM(f, InputBit.PUNCH, cfgWithJumpMoves);
+        expect(f.topState).toBe(TopState.Airborne);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('jumpPunch');
+    });
+
+    it('fall + KICK → airborne/attack with jumpKick', () => {
+        const f = makeFighter({ topState: TopState.Airborne, subState: 'fall', velY: 4 });
+        tickFSM(f, InputBit.KICK, cfgWithJumpMoves);
+        expect(f.topState).toBe(TopState.Airborne);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('jumpKick');
+    });
+
+    it('airborne attack completes → transitions to fall', () => {
+        const f = makeFighter({ topState: TopState.Airborne, subState: 'attack', currentMove: 'jumpPunch' });
+        const move = cfgWithJumpMoves.moves['jumpPunch'];
+        const total = move.startup + move.active + move.recovery;
+        for (let i = 0; i < total; i++) {
+            tickFSM(f, 0, cfgWithJumpMoves);
+        }
+        tickFSM(f, 0, cfgWithJumpMoves); // completes
+        expect(f.subState).toBe('fall');
+        expect(f.currentMove).toBeNull();
+    });
+
+    it('no jump attack if jumpPunch not in config', () => {
+        const f = makeFighter({ topState: TopState.Airborne, subState: 'jump', velY: -8 });
+        tickFSM(f, InputBit.PUNCH, cfgWithMoves); // no jumpPunch in cfgWithMoves
+        expect(f.subState).not.toBe('attack');
+    });
+
+    it('airborne attack preserves air control', () => {
+        const f = makeFighter({ topState: TopState.Airborne, subState: 'attack', currentMove: 'jumpPunch' });
+        tickFSM(f, InputBit.RIGHT, cfgWithJumpMoves);
+        expect(f.velX).toBe(cfgWithJumpMoves.walkSpeed * 0.8);
+    });
+
+    it('isCrouching cleared by attack.exit()', () => {
+        const f = makeFighter({
+            topState: TopState.Grounded,
+            subState: 'attack',
+            currentMove: 'crouchPunch',
+            isCrouching: true,
+            frameInState: 99, // past total
+        });
+        tickFSM(f, 0, cfgWithCrouchMoves);
+        expect(f.isCrouching).toBe(false);
+    });
 });
