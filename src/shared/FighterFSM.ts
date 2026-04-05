@@ -36,8 +36,16 @@ function totalMoveFrames(move: MoveDef): number {
 /** Check for attack input and transition to grounded/attack if a move exists. */
 function tryAttack(f: FighterState, bits: number, cfg: CharacterConfig): boolean {
     let moveKey: string | null = null;
-    if (has(bits, InputBit.PUNCH) && cfg.moves['punch']) moveKey = 'punch';
-    else if (has(bits, InputBit.KICK) && cfg.moves['kick']) moveKey = 'kick';
+    // P+K → special (priority over individual buttons)
+    if (has(bits, InputBit.PUNCH) && has(bits, InputBit.KICK)
+        && cfg.moves['special'] && f.specialCooldown <= 0) {
+        moveKey = 'special';
+        f.specialCooldown = cfg.specialCooldownFrames ?? 300;
+    } else if (has(bits, InputBit.PUNCH) && cfg.moves['punch']) {
+        moveKey = 'punch';
+    } else if (has(bits, InputBit.KICK) && cfg.moves['kick']) {
+        moveKey = 'kick';
+    }
     if (moveKey) {
         f.currentMove = moveKey;
         transition(f, cfg, TopState.Grounded, 'attack');
@@ -131,19 +139,52 @@ const attack: StateHandler = {
         f.velX = 0;
         // currentMove must be set BEFORE transitioning to this state
     },
-    update(f, _bits, cfg) {
+    update(f, bits, cfg) {
         const move = getMove(f, cfg);
         if (!move) {
             transition(f, cfg, TopState.Grounded, 'idle');
             return;
         }
+        // Chain cancel check (before completion)
+        for (const route of cfg.chainRoutes ?? []) {
+            if (route.from !== f.currentMove) continue;
+            if (f.frameInState < route.cancelWindow[0] || f.frameInState > route.cancelWindow[1]) continue;
+            if (route.onHitOnly && !f.hitConfirmed) continue;
+            // Check if player is pressing the right button for the target move
+            const toMove = cfg.moves[route.to];
+            if (!toMove) continue;
+            let wantsChain = false;
+            if (route.to === 'special' && has(bits, InputBit.PUNCH) && has(bits, InputBit.KICK) && f.specialCooldown <= 0) {
+                wantsChain = true;
+                f.specialCooldown = cfg.specialCooldownFrames ?? 300;
+            } else if (route.to === 'punch' && has(bits, InputBit.PUNCH)) {
+                wantsChain = true;
+            } else if (route.to === 'kick' && has(bits, InputBit.KICK)) {
+                wantsChain = true;
+            } else if (route.to.startsWith('crouch') && has(bits, InputBit.DOWN)) {
+                if (route.to === 'crouchPunch' && has(bits, InputBit.PUNCH)) wantsChain = true;
+                else if (route.to === 'crouchKick' && has(bits, InputBit.KICK)) wantsChain = true;
+            }
+            if (wantsChain) {
+                // In-place reset — bypass exit/enter to keep combo flowing
+                f.currentMove = route.to;
+                f.hitConfirmed = false;
+                f.frameInState = 0;
+                return;
+            }
+        }
         if (f.frameInState >= totalMoveFrames(move)) {
-            transition(f, cfg, TopState.Grounded, 'idle');
+            if (f.isCrouching) {
+                transition(f, cfg, TopState.Grounded, 'crouch');
+            } else {
+                transition(f, cfg, TopState.Grounded, 'idle');
+            }
         }
     },
     exit(f) {
         f.currentMove = null;
         f.hitConfirmed = false;
+        f.isCrouching = false;
     },
 };
 

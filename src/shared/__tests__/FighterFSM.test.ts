@@ -228,4 +228,94 @@ describe('FighterFSM', () => {
         expect(f.subState).toBe('attack');
         expect(f.currentMove).toBe('punch');
     });
+
+    // ── Special move + chain cancel (T02) ──────────────────────────
+
+    const cfgWithSpecial: CharacterConfig = {
+        ...cfgWithMoves,
+        moves: {
+            ...cfgWithMoves.moves,
+            special: {
+                name: 'special', damage: 200,
+                startup: 4, active: 4, recovery: 10,
+                hitbox: { x: 20, y: -60, width: 80, height: 40 },
+                knockbackX: 10, knockbackY: -4,
+                hitStunFrames: 20, blockStunFrames: 14,
+            },
+        },
+        specialCooldownFrames: 180,
+    };
+
+    const cfgWithChains: CharacterConfig = {
+        ...cfgWithMoves,
+        chainRoutes: [
+            { from: 'punch', to: 'kick', cancelWindow: [4, 8], onHitOnly: false },
+            { from: 'kick', to: 'punch', cancelWindow: [6, 12], onHitOnly: true },
+        ],
+    };
+
+    it('P+K triggers special move', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH | InputBit.KICK, cfgWithSpecial);
+        expect(f.subState).toBe('attack');
+        expect(f.currentMove).toBe('special');
+        expect(f.specialCooldown).toBe(180);
+    });
+
+    it('P+K blocked during cooldown — falls through to punch', () => {
+        const f = makeFighter({ specialCooldown: 100 });
+        tickFSM(f, InputBit.PUNCH | InputBit.KICK, cfgWithSpecial);
+        expect(f.currentMove).toBe('punch');
+    });
+
+    it('P+K with no special move in config → punch', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH | InputBit.KICK, cfgWithMoves);
+        expect(f.currentMove).toBe('punch');
+    });
+
+    it('chain cancel P→K during cancelWindow', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH, cfgWithChains); // enter attack, frameInState=1
+        // Advance to cancelWindow start (frame 4)
+        tickFSM(f, 0, cfgWithChains); // frame 2
+        tickFSM(f, 0, cfgWithChains); // frame 3
+        tickFSM(f, 0, cfgWithChains); // frame 4
+        // Now press KICK during cancel window
+        tickFSM(f, InputBit.KICK, cfgWithChains); // frame 5 → chain cancels
+        expect(f.currentMove).toBe('kick');
+        expect(f.frameInState).toBe(1); // 0 from chain reset, +1 from tickFSM increment
+    });
+
+    it('chain cancel rejected outside cancelWindow', () => {
+        const f = makeFighter();
+        tickFSM(f, InputBit.PUNCH, cfgWithChains); // enter attack, frame 1
+        // Press kick immediately (frame 1, outside window [4,8])
+        tickFSM(f, InputBit.KICK, cfgWithChains); // frame 2
+        expect(f.currentMove).toBe('punch'); // still punch
+    });
+
+    it('onHitOnly chain rejected without hitConfirmed', () => {
+        const f = makeFighter();
+        // Start kick attack
+        f.topState = TopState.Grounded;
+        f.subState = 'attack';
+        f.currentMove = 'kick';
+        f.frameInState = 6; // in cancelWindow [6,12]
+        f.hitConfirmed = false;
+        tickFSM(f, InputBit.PUNCH, cfgWithChains);
+        expect(f.currentMove).toBe('kick'); // chain rejected
+    });
+
+    it('onHitOnly chain succeeds with hitConfirmed', () => {
+        const f = makeFighter();
+        f.topState = TopState.Grounded;
+        f.subState = 'attack';
+        f.currentMove = 'kick';
+        f.frameInState = 6;
+        f.hitConfirmed = true;
+        tickFSM(f, InputBit.PUNCH, cfgWithChains);
+        expect(f.currentMove).toBe('punch');
+        expect(f.frameInState).toBe(1); // 0 from chain reset, +1 from tickFSM increment
+    });
 });
