@@ -29,7 +29,7 @@
 
 ## Follow-ups
 <!-- Tasks deferred from /incident or /change that need proper implementation later. -->
-- [ ] [2026-04-04] Mobile room code input — Phaser keyboard events don't open mobile keyboard. Need HTML `<input>` overlay for room code entry on touch devices.
+- [x] [2026-04-04] Mobile room code input — resolved: DOM `<input>` overlay already implemented.
 
 ## Task Log
 
@@ -509,3 +509,18 @@
 - **Status**: ✅ Done
 - **Files changed**: `src/game/scenes/MainMenu.ts`
 - **Learnings**: Text-based emoji icons (🔊/🔇) work well as quick UI without sprite assets. Placed at top-right (990, 20).
+
+## [2026-04-05] — [T26] Fix mobile room code input (Phase 3.5)
+- **Status**: ✅ Done (already implemented)
+- **Files changed**: none (code already present from prior session)
+- **Learnings**: DOM `<input>` overlay was already added during networking tasks. Follow-up in progress.md was stale.
+
+## [2026-04-05] — [T27] URL-based room join (Phase 3.5)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`
+- **Learnings**: URL param parsed in `create()` before `showMainView()`. Fallback: if connection/join fails and UI is empty (uiContainer.length === 0), show main view automatically.
+
+## [2026-04-05] — [T28] Copy invite link button (Phase 3.5)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/MainMenu.ts`
+- **Learnings**: `navigator.clipboard.writeText()` returns a Promise — handle both success and failure. Green-styled button (0x225522/0x66ff66) visually differentiates from regular blue buttons.
