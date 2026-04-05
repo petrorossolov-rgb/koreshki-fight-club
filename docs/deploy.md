@@ -32,6 +32,7 @@ The server is a Deno WebSocket server deployed to [Deno Deploy](https://dash.den
 |---|---|---|
 | `PORT` | `8000` | HTTP server port (Deno Deploy sets this automatically) |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin (set to your Pages URL in production) |
+| `CLIENT_URL` | `http://localhost:5173` | Client base URL for invite link redirects (`/join/:code` → `CLIENT_URL?room=CODE`) |
 
 ### Deploy via `deployctl`
 
@@ -39,6 +40,7 @@ The server is a Deno WebSocket server deployed to [Deno Deploy](https://dash.den
 2. Link project: `deployctl deploy --project=koreshki-server --entrypoint=server/main.ts`
 3. Set env vars in Deno Deploy dashboard: **Settings > Environment Variables**
    - `CORS_ORIGIN` = `https://<username>.github.io`
+   - `CLIENT_URL` = `https://<username>.github.io/<repo-name>`
 
 ### Deploy via GitHub integration
 
@@ -73,5 +75,7 @@ Default client connects to `ws://localhost:8000/ws`.
 
 - [ ] `VITE_WS_URL` points to production server (`wss://...`)
 - [ ] `CORS_ORIGIN` set to Pages URL (not `*`)
+- [ ] `CLIENT_URL` set to Pages URL (for `/join/:code` invite redirects)
 - [ ] Server `/health` endpoint responds with 200
 - [ ] WebSocket connects from deployed client
+- [ ] Invite link redirect works: `https://server/join/ABCD` → client with `?room=ABCD`

@@ -67,6 +67,61 @@ Manual testing checklist for verifying the full game loop on real devices.
 - [ ] Memory usage stable over 5-minute session (no leaks)
 - [ ] Network traffic reasonable (~20 state updates/sec)
 
+## 5. Phase 3: Combo System
+
+- [ ] Punch → Punch chain connects (2-hit combo)
+- [ ] Kick → Punch chain connects
+- [ ] Combo counter appears at 2+ hits with hit count and damage
+- [ ] Combo counter fades after combo drops
+- [ ] Hitstun scaling reduces stun on later hits in a combo
+- [ ] Crouch attack works (down + punch/kick)
+- [ ] Jump attack works (airborne + punch/kick)
+
+## 6. Phase 3: Special Moves
+
+- [ ] P+K button triggers special move (touch)
+- [ ] Special has startup, active, recovery phases
+- [ ] Cooldown indicator fills during cooldown period
+- [ ] Cooldown indicator flashes green when ready
+- [ ] Special cannot be used during cooldown
+- [ ] `special_used` event fires (visible in combo counter or server broadcast)
+
+## 7. Phase 3: Audio
+
+- [ ] Audio plays after first touch (autoplay policy respected)
+- [ ] Hit SFX on punch/kick landing
+- [ ] Block SFX on blocked attack
+- [ ] KO SFX on round end
+- [ ] Background music loops during fight
+- [ ] Mute button toggles all audio (🔊 ↔ 🔇)
+- [ ] Mute state persists across page reloads (localStorage)
+- [ ] Music stops on scene transition (fight → game over)
+
+## 8. Phase 3: Visual Effects
+
+- [ ] Hit flash on damaged fighter
+- [ ] Hit-stop zoom on impact
+- [ ] Screen shake on heavy hits
+- [ ] Hit spark particles at impact point
+
+## 9. Phase 3: Invite Links
+
+- [ ] Create room → COPY LINK button appears with room code
+- [ ] Copied URL format: `https://...?room=ABCD`
+- [ ] Open invite link → auto-joins room (no manual code entry)
+- [ ] Server `/join/:code` redirect works cross-device
+- [ ] URL parameter cleaned from address bar after join
+
+## 10. Phase 3: Auto-Reconnect
+
+- [ ] Disconnect mid-fight → "Переподключение..." overlay shown
+- [ ] Reconnect attempt counter visible (e.g., "1/5")
+- [ ] Successful reconnect → overlay hides, fight resumes
+- [ ] Opponent disconnects → grace period countdown shown
+- [ ] Opponent reconnects within grace period → fight resumes
+- [ ] All reconnect attempts fail → return to main menu
+- [ ] Switch to another app and back (mobile) → auto-reconnect
+
 ## Notes
 
 Record any issues found during testing here:
