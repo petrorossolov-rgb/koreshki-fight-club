@@ -50,7 +50,14 @@ export class Fighter {
         this.sprite.setFlipX(state.facingRight);
 
         const stateKey = `${state.topState}/${state.subState}`;
-        const animConfigKey = STATE_TO_ANIM[stateKey] ?? 'idle';
+        let animConfigKey = STATE_TO_ANIM[stateKey] ?? 'idle';
+
+        // Use move-specific animation when attacking (punch, kick, special, etc.)
+        if (state.subState === 'attack' && state.currentMove) {
+            const moveAnim = this.config.animations[state.currentMove];
+            if (moveAnim) animConfigKey = state.currentMove;
+        }
+
         const animKey = this.animPrefix + animConfigKey;
 
         if (this.currentAnimKey !== animKey) {

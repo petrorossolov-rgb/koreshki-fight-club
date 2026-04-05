@@ -20,6 +20,9 @@ const animations = {
   fall:   { key: "fall",   frameStart: 33, frameEnd: 35, frameRate: 8,  repeat: -1 },
   crouch: { key: "crouch", frameStart: 33, frameEnd: 33, frameRate: 1,  repeat: 0 },
   attack: { key: "attack", frameStart: 44, frameEnd: 50, frameRate: 14, repeat: 0 },
+  punch:  { key: "punch",  frameStart: 44, frameEnd: 47, frameRate: 18, repeat: 0 },
+  kick:   { key: "kick",   frameStart: 47, frameEnd: 50, frameRate: 14, repeat: 0 },
+  special:{ key: "special",frameStart: 44, frameEnd: 50, frameRate: 10, repeat: 0 },
   hit:    { key: "hit",    frameStart: 55, frameEnd: 57, frameRate: 10, repeat: 0 },
   dead:   { key: "dead",   frameStart: 66, frameEnd: 76, frameRate: 10, repeat: 0 },
 };
