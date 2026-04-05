@@ -97,6 +97,91 @@
       "knockbackY": -3,
       "hitStunFrames": 16,
       "blockStunFrames": 10
+    },
+    "special": {
+      "name": "Фристайл Фаталити",
+      "damage": 180,
+      "startup": 7,
+      "active": 3,
+      "recovery": 10,
+      "hitbox": {
+        "x": 28,
+        "y": -58,
+        "width": 60,
+        "height": 42
+      },
+      "knockbackX": 8,
+      "knockbackY": -4,
+      "hitStunFrames": 20,
+      "blockStunFrames": 12
+    },
+    "crouchPunch": {
+      "name": "crouchPunch",
+      "damage": 50,
+      "startup": 2,
+      "active": 2,
+      "recovery": 4,
+      "hitbox": {
+        "x": 30,
+        "y": -16,
+        "width": 45,
+        "height": 22
+      },
+      "knockbackX": 2,
+      "knockbackY": 0,
+      "hitStunFrames": 8,
+      "blockStunFrames": 6
+    },
+    "crouchKick": {
+      "name": "crouchKick",
+      "damage": 90,
+      "startup": 4,
+      "active": 3,
+      "recovery": 7,
+      "hitbox": {
+        "x": 25,
+        "y": -12,
+        "width": 58,
+        "height": 26
+      },
+      "knockbackX": 4,
+      "knockbackY": 0,
+      "hitStunFrames": 12,
+      "blockStunFrames": 8
+    },
+    "jumpPunch": {
+      "name": "jumpPunch",
+      "damage": 65,
+      "startup": 3,
+      "active": 3,
+      "recovery": 5,
+      "hitbox": {
+        "x": 28,
+        "y": -45,
+        "width": 44,
+        "height": 30
+      },
+      "knockbackX": 3,
+      "knockbackY": -2,
+      "hitStunFrames": 10,
+      "blockStunFrames": 7
+    },
+    "jumpKick": {
+      "name": "jumpKick",
+      "damage": 100,
+      "startup": 5,
+      "active": 4,
+      "recovery": 6,
+      "hitbox": {
+        "x": 20,
+        "y": -25,
+        "width": 50,
+        "height": 38
+      },
+      "knockbackX": 5,
+      "knockbackY": 4,
+      "hitStunFrames": 14,
+      "blockStunFrames": 9
     }
   },
   "pushbox": {
@@ -119,5 +204,26 @@
   "scale": 1,
   "tint": 7368816,
   "portraitFrame": 0,
-  "maxHp": 1000
+  "maxHp": 1000,
+  "chainRoutes": [
+    {
+      "from": "punch",
+      "to": "kick",
+      "cancelWindow": [
+        5,
+        8
+      ],
+      "onHitOnly": false
+    },
+    {
+      "from": "punch",
+      "to": "punch",
+      "cancelWindow": [
+        5,
+        8
+      ],
+      "onHitOnly": false
+    }
+  ],
+  "specialCooldownFrames": 240
 }

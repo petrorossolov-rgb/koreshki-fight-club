@@ -21,7 +21,7 @@ interface Manifest {
 }
 
 const REQUIRED_ANIM_KEYS = ['idle', 'run', 'jump', 'fall', 'crouch', 'attack', 'hit', 'dead'];
-const REQUIRED_MOVE_KEYS = ['punch', 'kick'];
+const REQUIRED_MOVE_KEYS = ['punch', 'kick', 'special', 'crouchPunch', 'crouchKick', 'jumpPunch', 'jumpKick'];
 
 const manifest: Manifest = JSON.parse(
     fs.readFileSync(path.join(DATA_DIR, 'manifest.json'), 'utf-8'),
@@ -115,6 +115,31 @@ describe('Character configs (via manifest)', () => {
                 expect(move.hitStunFrames).toBeGreaterThan(0);
                 expect(move.blockStunFrames).toBeGreaterThan(0);
             }
+        });
+
+        it('has valid chainRoutes', () => {
+            expect(Array.isArray(config.chainRoutes)).toBe(true);
+            expect(config.chainRoutes.length).toBeGreaterThan(0);
+            for (const route of config.chainRoutes) {
+                expect(route.from).toBeTypeOf('string');
+                expect(route.to).toBeTypeOf('string');
+                expect(config.moves).toHaveProperty(route.from);
+                expect(config.moves).toHaveProperty(route.to);
+                expect(Array.isArray(route.cancelWindow)).toBe(true);
+                expect(route.cancelWindow).toHaveLength(2);
+                expect(route.cancelWindow[0]).toBeLessThanOrEqual(route.cancelWindow[1]);
+                expect(route.onHitOnly).toBeTypeOf('boolean');
+            }
+        });
+
+        it('has specialCooldownFrames', () => {
+            expect(config.specialCooldownFrames).toBeTypeOf('number');
+            expect(config.specialCooldownFrames).toBeGreaterThan(0);
+        });
+
+        it('special move has a humorous name', () => {
+            expect(config.moves.special.name).toBeTypeOf('string');
+            expect(config.moves.special.name).not.toBe('');
         });
 
         it('has valid pushbox and hurtbox', () => {
