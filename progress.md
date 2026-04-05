@@ -13,6 +13,7 @@
 - **Hit detection timing**: frameInState is incremented by tickFSM BEFORE processHits runs — active frames start at frameInState=startup (1-indexed after tickFSM)
 - **Blocking**: defender must hold back + be grounded + not attacking. Blocked = no damage, blockstun, knockback×0.5
 - **Round phases**: Intro(60f) → Fight → KO(120f) → RoundEnd(transient) → MatchEnd. Tests skip Intro by setting roundPhase=Fight
+- **stunDuration ordering**: set `stunDuration` AFTER `transition()`, not before — hitstun/blockstun `exit()` clears it to 0
 - **Resolve aliases (3 places)**: `tsconfig.json` (paths), `vitest.config.ts` (resolve.alias), `vite/config.*.mjs` (resolve.alias) — all must stay in sync
 - **Server imports**: `sendMsg` lives in `server/utils.ts` (not main.ts) to avoid side-effect imports. Server code uses `.ts` extensions in imports (Deno convention).
 - **Room callbacks**: Room has `onDestroy`, `onInput`, `onFightStart` callbacks — keeps RoomManager decoupled from GameRoom
@@ -378,3 +379,99 @@
 - **Files changed**: `src/game/scenes/CharacterSelect.ts`
 - **Learnings**: `time.delayedCall` chains work well for sequential visual effects — cleaner than setInterval with manual cleanup. `isRandomCycling` flag prevents interaction during animation.
 - **Patterns**: Cycling animation: 12-18 steps at 100ms, yellow highlight during cycling, then applySelection() for final pick.
+
+## [2026-04-05] — [T01] Extend types for combo system + GameEvent (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/types.ts`, `src/shared/FightEngine.ts`, 4 test files
+- **Learnings**: Adding new required fields to FighterState/GameState requires updating all makeFighter() helpers across test files
+- **Patterns**: New CharacterConfig fields are optional (?) to avoid breaking existing JSON configs
+
+## [2026-04-05] — [T02] Chain cancel + special move in FighterFSM (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FighterFSM.ts`, `src/shared/__tests__/FighterFSM.test.ts`
+- **Learnings**: Chain cancel uses in-place reset (frameInState=0, swap currentMove) — bypasses exit/enter lifecycle. frameInState is incremented AFTER update in tickFSM, so chain-reset results in frameInState=1 after the tick.
+- **Patterns**: P+K special check runs BEFORE individual P/K checks in tryAttack(). Chain cancel iterates chainRoutes and checks input match for target move.
+
+## [2026-04-05] — [T03] GameEvent emission + combo tracking in FightEngine (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/__tests__/FightEngine.test.ts`
+- **Learnings**: Closure-captured `events` array needs getter (`get events()`) on return object — direct property assignment captures initial reference, not updated one after `events = []` reassignment.
+- **Patterns**: Events cleared at step start. Combo resets when opponent exits hitstun/blockstun (per-frame check). specialCooldown decrements in stepFight after FSM ticks.
+
+## [2026-04-05] — [T04] Crouch attack in FSM (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FighterFSM.ts`, `src/shared/__tests__/FighterFSM.test.ts`
+- **Learnings**: Crouch attack reuses `grounded/attack` handler — `isCrouching` flag controls return to crouch on completion. No new state handler needed.
+- **Patterns**: Crouch attacks use P+K/PUNCH/KICK same priority as standing, but check for crouchPunch/crouchKick move keys.
+
+## [2026-04-05] — [T05] Jump attack in FSM + landing cleanup (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FighterFSM.ts`, `src/shared/__tests__/FighterFSM.test.ts`, `src/shared/PhysicsSystem.ts`, `src/shared/__tests__/PhysicsSystem.test.ts`, `src/game/entities/Fighter.ts`
+- **Learnings**: `clampToStage()` directly sets topState/subState bypassing FSM transitions — must manually clear currentMove/hitConfirmed in landing code path since `airborneAttack.exit()` never runs.
+- **Patterns**: `tryAirAttack()` helper mirrors `tryAttack()` but for jumpPunch/jumpKick. Airborne attack completes to fall (not idle).
+
+## [2026-04-05] — [T06] Hitstun scaling / damage proration (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/FightEngine.ts`, `src/shared/__tests__/FightEngine.test.ts`
+- **Learnings**: `stunDuration` must be set AFTER `transition()` call, not before — exit() of hitstun/blockstun clears stunDuration to 0, overwriting the value.
+- **Patterns**: Proration formula: `1.0 - (comboCount * 0.15)` floored at 0.4 for damage, 0.5 for hitstun. Applied before comboCount increment.
+
+## [2026-04-05] — [T07] Update gen-characters.mjs with new moves + chainRoutes
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-characters.mjs`
+- **Learnings**: cancelWindow derived from move frame data: `[startup + active, startup + active + recovery - 2]`. Short category gets 3 chain routes (rushdown archetype), big/tall/standard get 2.
+- **Patterns**: Per-character special names stored in a flat `SPECIAL_NAMES` map keyed by character id.
+
+## [2026-04-05] — [T08] Regenerate 17 character JSON configs
+- **Status**: ✅ Done
+- **Files changed**: `public/data/characters/*.json` (17 files), `public/data/characters/default.json`, `src/shared/__tests__/CharacterConfig.test.ts`
+- **Learnings**: default.json must be updated manually (not generated). Validation tests check chainRoute `from`/`to` reference existing moves.
+- **Patterns**: REQUIRED_MOVE_KEYS expanded to 7 moves. chainRoutes validated for referential integrity (from/to must exist in moves).
+
+## [2026-04-05] — [T09] FighterFSM comprehensive tests (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/__tests__/FighterFSM.test.ts`
+- **Learnings**: hitStop from previous hits persists across manual phase changes — must clear before forcing KO/RoundEnd transitions in tests. clampToStage bypass of FSM exit() is a known pattern, tested via PhysicsSystem import.
+- **Patterns**: Test configs (cfgJabJab, cfgChainToSpecial, cfgChainToCrouch) compose from base cfgWithMoves. 64 FSM tests total.
+
+## [2026-04-05] — [T10] FightEngine comprehensive tests (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/__tests__/FightEngine.test.ts`
+- **Learnings**: matchStats live on GameState (not fighters), so they survive resetFightersForRound. hitStop must be explicitly cleared in tests before forcing phase transitions.
+- **Patterns**: For multi-hit combo tests, manually reset attacker state (idle, clear hitConfirmed) and set long stunDuration on defender. 61 engine tests total.
+
+## [2026-04-05] — [T13] Hit flash + hit-stop camera zoom (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/entities/Fighter.ts`, `src/game/scenes/FightScene.ts`
+- **Learnings**: Hitstun entry detection via wasInHitstun flag in syncToState. flashFrames counter restores original tint after 3 frames.
+- **Patterns**: setTintFill(0xffffff) for white flash, clearTint() or setTint(original) to restore.
+
+## [2026-04-05] — [T16] Screen shake (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts`
+- **Learnings**: processEvents() method processes engine.events array after step loop. Events are one-frame (cleared each step).
+- **Patterns**: cam.shake(duration, intensity) — light=0.005, medium=0.01, heavy=0.02.
+
+## [2026-04-05] — [T17] HitSpark particle effect (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/HitSpark.ts` (new), `src/game/scenes/FightScene.ts`
+- **Learnings**: Runtime texture generation with make.graphics + generateTexture for simple particle shapes. emitting:false + emitParticleAt for one-shot bursts.
+- **Patterns**: Phaser particle emitter config: quantity for burst count, emitting:false for on-demand emission.
+
+## [2026-04-05] — [T22] HealthBar improvements (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/HealthBar.ts`, `src/game/scenes/FightScene.ts`
+- **Learnings**: Damage trail is just a second rectangle behind the HP bar with slower lerp (0.02 vs 0.08).
+- **Patterns**: HealthBar constructor accepts optional nickname param. Depth ordering: bg=100, trail=101, fill=102.
+
+## [2026-04-05] — [T22b] RoundDisplay improvements (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/ui/RoundDisplay.ts`
+- **Learnings**: Timer pulse uses alpha tween with color change in onUpdate callback. Danger mode toggled by threshold check each frame.
+- **Patterns**: Text shadow: `{ offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }`. Destroy tween to stop it cleanly.
+
+## [2026-04-05] — [T25] KO slow-motion (Phase 3)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/FightScene.ts`
+- **Learnings**: time.timeScale affects Phaser's delta — accumulator gets less delta, fewer engine steps = desired slow-mo effect. Online mode must skip to prevent desync.
+- **Patterns**: `this.time.timeScale = 0.3` + delayedCall(1000ms real) to restore. Guard with `if (this.mode === 'local')`.
