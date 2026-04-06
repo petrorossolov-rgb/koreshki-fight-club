@@ -7,7 +7,7 @@
 import { writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { deflateSync } from 'zlib';
+import { encodePNG } from './lib/png.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = join(__dirname, '..', 'public', 'assets', 'logo.png');
@@ -126,51 +126,7 @@ drawText(TITLE, titleX, titleY, TITLE_SCALE, fireColor);
 drawTextShadow(SUBTITLE, subX, subY, SUB_SCALE, 60, 60, 60);
 drawText(SUBTITLE, subX, subY, SUB_SCALE, () => [255, 255, 255]);
 
-// === PNG encoder (same as gen-bg.mjs) ===
-function crc32(buf) {
-    let c = 0xffffffff;
-    for (let i = 0; i < buf.length; i++) {
-        c ^= buf[i];
-        for (let j = 0; j < 8; j++) {
-            c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
-        }
-    }
-    return (c ^ 0xffffffff) >>> 0;
-}
-
-function chunk(type, data) {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const typeData = Buffer.concat([Buffer.from(type), data]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(typeData));
-    return Buffer.concat([len, typeData, crc]);
-}
-
-const raw = Buffer.alloc(H * (1 + W * 4));
-for (let y = 0; y < H; y++) {
-    const rowOffset = y * (1 + W * 4);
-    raw[rowOffset] = 0;
-    pixels.copy(raw, rowOffset + 1, y * W * 4, (y + 1) * W * 4);
-}
-
-const compressed = deflateSync(raw);
-
-const ihdr = Buffer.alloc(13);
-ihdr.writeUInt32BE(W, 0);
-ihdr.writeUInt32BE(H, 4);
-ihdr[8] = 8;
-ihdr[9] = 6; // RGBA
-ihdr[10] = 0;
-ihdr[11] = 0;
-ihdr[12] = 0;
-
-const png = Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', compressed),
-    chunk('IEND', Buffer.alloc(0)),
-]);
+const png = encodePNG(W, H, pixels);
 
 writeFileSync(OUT_PATH, png);
 console.log(`✓ Generated logo.png (${W}x${H}, ${png.length} bytes)`);
