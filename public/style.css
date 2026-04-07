@@ -73,6 +73,23 @@ body {
     margin-bottom: 16px;
 }
 
+#portrait-fs-btn {
+    margin-top: 24px;
+    padding: 14px 36px;
+    font-family: 'Arial Black', sans-serif;
+    font-size: 20px;
+    color: #fff;
+    background: #335;
+    border: 2px solid #aaf;
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#portrait-fs-btn:active {
+    background: #557;
+}
+
 @media (orientation: portrait) and (hover: none) and (pointer: coarse) {
     #portrait-warning {
         display: flex;

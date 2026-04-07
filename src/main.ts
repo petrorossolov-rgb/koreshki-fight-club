@@ -11,6 +11,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener(evt, (e) => e.preventDefault(), { passive: false } as EventListenerOptions);
     }
 
+    // ── Portrait fullscreen button (inside portrait-warning overlay) ─
+    const portraitFsBtn = document.getElementById('portrait-fs-btn');
+    if (portraitFsBtn) {
+        portraitFsBtn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?(): Promise<void> };
+            (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.())?.catch(() => {});
+            try {
+                const orientation = screen.orientation as ScreenOrientation & { lock?(type: string): Promise<void> };
+                orientation.lock?.('landscape')?.catch(() => {});
+            } catch { /* not supported */ }
+        });
+    }
+
     // ── Fullscreen exit button (DOM overlay) ────────────────────────
     const fsBtn = document.getElementById('fs-exit-btn');
     if (fsBtn) {
