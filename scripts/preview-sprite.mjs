@@ -18,22 +18,22 @@ import {
     ANIMATIONS,
     generateScaledAnimFrames,
     renderFrame,
+    CHARACTER_VISUALS,
 } from './gen-sprites.mjs';
 
 const ZOOM = 4;
 const charId = process.argv[2] || 'petyaj';
 
-// Test visuals (will be replaced with real CHARACTER_VISUALS in T06+)
-const DEFAULT_VISUALS = {
+// Look up character visuals, fall back to default
+const charEntry = CHARACTER_VISUALS[charId];
+const DEFAULT_VISUALS = charEntry?.visuals ?? {
     skinColor:  [220, 180, 140, 255],
     hairColor:  [60, 30, 15, 255],
     torsoColor: [50, 120, 200, 255],
     pantsColor: [40, 40, 80, 255],
     shoeColor:  [30, 30, 30, 255],
 };
-
-// Determine category (default to standard for now)
-const category = 'standard';
+const category = charEntry?.category ?? 'standard';
 
 // Collect all animation rows
 const animNames = Object.keys(ANIM_ROWS);

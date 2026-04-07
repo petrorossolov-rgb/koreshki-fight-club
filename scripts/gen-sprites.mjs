@@ -1,12 +1,16 @@
 /**
  * Procedural chibi sprite generator.
- * Phase 3: Skeleton + keyframes + body part renderer.
+ * Phase 3: Skeleton + keyframes + body part renderer + sheet assembly.
  *
  * Usage:
  *   node scripts/gen-sprites.mjs [charId]   — generate single character (or all)
  */
 
-import { FrameBuffer, fillRect, fillCircle, fillOval, drawLine } from './lib/draw.mjs';
+import { writeFileSync, mkdirSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { FrameBuffer, fillRect, fillCircle, fillOval, drawLine, blit } from './lib/draw.mjs';
+import { encodePNG } from './lib/png.mjs';
 
 // ── Joint hierarchy ─────────────────────────────────────────────────────
 // 12 joints: root → hip → torso → head
@@ -605,4 +609,90 @@ export function renderFrame(pose, visuals, fb) {
     // ── Layer 9: Front arm (armR) + sleeve ────────────────────
     drawLine(fb, jx('armR'), jy('armR'), jx('handR'), jy('handR'), ARM_THICK, torso);
     fillCircle(fb, jx('handR'), jy('handR'), HAND_RADIUS, skin);
+}
+
+// ── Sheet assembly ────────────────────────────────────────────────────
+
+/** Sheet dimensions */
+export const SHEET_W = COLS * FRAME_W;  // 1386
+export const SHEET_H = ROWS * FRAME_H; // 882
+
+/**
+ * Assemble a full spritesheet (11×7 grid of 126×126 frames).
+ * @param {string} id — character identifier
+ * @param {Visuals} visuals — character colors
+ * @param {keyof typeof SIZE_CATEGORIES} [category='standard']
+ * @returns {Buffer} PNG buffer
+ */
+export function assembleSheet(id, visuals, category = 'standard') {
+    const fb = new FrameBuffer(SHEET_W, SHEET_H);
+
+    const animNames = Object.keys(ANIM_ROWS);
+    for (const animName of animNames) {
+        const { row } = ANIM_ROWS[animName];
+        const poses = generateScaledAnimFrames(animName, category);
+
+        for (let f = 0; f < poses.length; f++) {
+            const frameFb = new FrameBuffer(FRAME_W, FRAME_H);
+            renderFrame(poses[f], visuals, frameFb);
+            blit(frameFb, fb, f * FRAME_W, row * FRAME_H);
+        }
+    }
+
+    return encodePNG(SHEET_W, SHEET_H, fb.toBuffer());
+}
+
+// ── Character visuals ─────────────────────────────────────────────────
+
+/** @type {Record<string, {visuals: Visuals, category: keyof typeof SIZE_CATEGORIES}>} */
+export const CHARACTER_VISUALS = {
+    petyaj: {
+        category: 'tall',
+        visuals: {
+            skinColor:  [220, 180, 140, 255],
+            hairColor:  [60, 30, 15, 255],
+            torsoColor: [50, 120, 200, 255],
+            pantsColor: [40, 40, 80, 255],
+            shoeColor:  [30, 30, 30, 255],
+        },
+    },
+};
+
+// ── CLI ───────────────────────────────────────────────────────────────
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const FIGHTERS_DIR = join(__dirname, '..', 'public', 'assets', 'fighters');
+
+/**
+ * Generate spritesheet PNG for a character.
+ * @param {string} id
+ */
+function generateCharacter(id) {
+    const entry = CHARACTER_VISUALS[id];
+    if (!entry) {
+        console.error(`Unknown character: ${id}`);
+        console.error(`Available: ${Object.keys(CHARACTER_VISUALS).join(', ')}`);
+        process.exit(1);
+    }
+    const png = assembleSheet(id, entry.visuals, entry.category);
+    mkdirSync(FIGHTERS_DIR, { recursive: true });
+    const outPath = join(FIGHTERS_DIR, `${id}.png`);
+    writeFileSync(outPath, png);
+    console.log(`Generated: ${outPath} (${(png.length / 1024).toFixed(1)} KB)`);
+}
+
+// Run only when executed directly (not imported)
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+    const args = process.argv.slice(2);
+    if (args.length === 0) {
+        // Generate all characters
+        for (const id of Object.keys(CHARACTER_VISUALS)) {
+            generateCharacter(id);
+        }
+    } else {
+        for (const id of args) {
+            generateCharacter(id);
+        }
+    }
 }
