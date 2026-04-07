@@ -699,3 +699,21 @@
 - **Files changed**: `scripts/gen-sprites.mjs`, `scripts/lib/__tests__/gen-sprites.test.mjs`
 - **Learnings**: Gloves handled at hand-rendering level (handColor override), not in renderAccessories. Multiple accessories can combine (array-based).
 - **Patterns**: `renderFace(fb, cx, cy, r, visuals)` — eyes + optional beard. `renderAccessories(fb, cx, cy, r, visuals)` — helmet/headphones/glasses/mask drawn over head, gloves = handColor swap in renderFrame.
+
+## [2026-04-07] — [T09] 17 CHARACTER_VISUALS + all spritesheets (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs`, `scripts/lib/__tests__/gen-sprites.test.mjs`, 16 new PNGs in `public/assets/fighters/`
+- **Learnings**: Each character must be visually distinct via unique (hairStyle + hairColor + torsoColor) combination. Categories sourced from manifest.json.
+- **Patterns**: `CHARACTER_VISUALS` map keyed by character ID, contains `{visuals, category}`. CLI: `node scripts/gen-sprites.mjs` generates all, `node scripts/gen-sprites.mjs {id}` generates one.
+
+## [2026-04-07] — [T10] Portraits + update gen-characters.mjs (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs`, `scripts/gen-characters.mjs`, 17 portrait PNGs, 17 character JSON configs
+- **Learnings**: Portrait crops head+torso from idle frame 0, nearest-neighbor scales to 200×200. Per-character spriteSheet paths (`assets/fighters/${id}.png`), tint=0xFFFFFF and scale=1.0 neutralize old category-based scaling (now baked into sprites).
+- **Patterns**: `generatePortrait(id, visuals, category)` — crop + scale idle frame to 200×200 portrait PNG.
+
+## [2026-04-07] — [T11] Update Fighter.ts for per-character textures (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/entities/Fighter.ts`, `src/shared/__tests__/CharacterConfig.test.ts`
+- **Learnings**: With tint always 0xFFFFFF, flash recovery simplifies to just `clearTint()`. CharacterConfig test needed immediate update (was asserting shared spritesheet path).
+- **Patterns**: Texture key = `config.id` everywhere (sprite creation, loadAssets, generateFrameNumbers). No more SHARED_TEXTURE constant.

@@ -493,11 +493,11 @@ Based on: [docs/plan-sprites.md](docs/plan-sprites.md)
 - [x] T08: Accessories renderer + face details
 
 ### Wave 6
-- [ ] T09: Define 17 CHARACTER_VISUALS + generate all spritesheets
+- [x] T09: Define 17 CHARACTER_VISUALS + generate all spritesheets
 
 ### Wave 7
-- [ ] T10: Generate portraits + update gen-characters.mjs
-- [ ] T11: Update Fighter.ts for per-character textures
+- [x] T10: Generate portraits + update gen-characters.mjs
+- [x] T11: Update Fighter.ts for per-character textures
 
 ### Wave 8
 - [ ] T12: Update Preloader.ts for dynamic spritesheet loading
