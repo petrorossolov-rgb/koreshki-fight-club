@@ -1,10 +1,12 @@
 /**
  * Procedural chibi sprite generator.
- * Phase 2: Skeleton system, animation keyframes, and size scaling.
+ * Phase 3: Skeleton + keyframes + body part renderer.
  *
  * Usage:
  *   node scripts/gen-sprites.mjs [charId]   — generate single character (or all)
  */
+
+import { FrameBuffer, fillRect, fillCircle, fillOval, drawLine } from './lib/draw.mjs';
 
 // ── Joint hierarchy ─────────────────────────────────────────────────────
 // 12 joints: root → hip → torso → head
@@ -510,7 +512,97 @@ export const ANIMATIONS = {
 export function generateScaledAnimFrames(animName, category = 'standard') {
     const anim = ANIMATIONS[animName];
     if (!anim) throw new Error(`Unknown animation: ${animName}`);
-    const { sx, sy, headScale } = SIZE_CATEGORIES[category] ?? SIZE_CATEGORIES.standard;
+    const { sx, sy } = SIZE_CATEGORIES[category] ?? SIZE_CATEGORIES.standard;
     const basePoses = generateAnimFrames(anim.keyframes, anim.totalFrames);
-    return basePoses.map(p => scalePose(p, sx, sy, headScale));
+    return basePoses.map(p => scalePose(p, sx, sy));
+}
+
+// ── Body part renderer ─────────────────────────────────────────────────
+
+/**
+ * @typedef {{
+ *   skinColor: [number,number,number,number],
+ *   hairColor: [number,number,number,number],
+ *   torsoColor: [number,number,number,number],
+ *   pantsColor: [number,number,number,number],
+ *   shoeColor: [number,number,number,number],
+ *   eyeColor?: [number,number,number,number],
+ *   headRadius?: number,
+ * }} Visuals
+ */
+
+// Root position in 126×126 frame (feet anchor)
+const ROOT_X = Math.floor(FRAME_W / 2); // 63
+const ROOT_Y = FEET_Y; // 82
+
+// Default limb thickness
+const ARM_THICK = 4;
+const LEG_THICK = 5;
+const HAND_RADIUS = 3;
+
+/**
+ * Render a single chibi frame onto a FrameBuffer.
+ * 9 layers: backArm, backLeg, torso, frontLeg, head(skin), hair(placeholder), face(eyes), accessories(no-op), frontArm
+ *
+ * @param {Pose} pose — joint positions relative to root (0,0 = feet)
+ * @param {Visuals} visuals — character colors
+ * @param {FrameBuffer} fb — target 126×126 buffer (cleared by caller)
+ */
+export function renderFrame(pose, visuals, fb) {
+    const ox = ROOT_X;
+    const oy = ROOT_Y;
+
+    /** Convert pose-relative coords to framebuffer pixel coords */
+    const jx = (/** @type {Joint} */ j) => ox + pose[j].x;
+    const jy = (/** @type {Joint} */ j) => oy + pose[j].y;
+
+    const skin = visuals.skinColor;
+    const torso = visuals.torsoColor;
+    const pants = visuals.pantsColor;
+    const shoe = visuals.shoeColor;
+    const hair = visuals.hairColor;
+    const eye = visuals.eyeColor ?? [0, 0, 0, 255];
+    const headR = visuals.headRadius ?? 10;
+
+    // ── Layer 1: Back arm (armL) + sleeve ──────────────────────
+    drawLine(fb, jx('armL'), jy('armL'), jx('handL'), jy('handL'), ARM_THICK, torso);
+    fillCircle(fb, jx('handL'), jy('handL'), HAND_RADIUS, skin);
+
+    // ── Layer 2: Back leg (legL) + pants + shoe ───────────────
+    drawLine(fb, jx('legL'), jy('legL'), jx('footL'), jy('footL'), LEG_THICK, pants);
+    fillCircle(fb, jx('footL'), jy('footL'), 3, shoe);
+
+    // ── Layer 3: Torso ────────────────────────────────────────
+    const torsoX = jx('torso');
+    const torsoY = jy('torso');
+    const hipY = jy('hip');
+    const torsoH = hipY - torsoY;
+    const torsoW = 12;
+    fillRect(fb, torsoX - torsoW / 2, torsoY, torsoW, torsoH, torso);
+
+    // ── Layer 4: Front leg (legR) + pants + shoe ──────────────
+    drawLine(fb, jx('legR'), jy('legR'), jx('footR'), jy('footR'), LEG_THICK, pants);
+    fillCircle(fb, jx('footR'), jy('footR'), 3, shoe);
+
+    // ── Layer 5: Head (skin) ──────────────────────────────────
+    const headCX = jx('head');
+    const headCY = jy('head');
+    fillCircle(fb, headCX, headCY, headR, skin);
+
+    // ── Layer 6: Hair (placeholder — solid cap on top) ────────
+    fillOval(fb, headCX, headCY - Math.floor(headR * 0.4), headR + 1, Math.floor(headR * 0.7), hair);
+
+    // ── Layer 7: Face (eyes) ──────────────────────────────────
+    const eyeOffY = -1;
+    const eyeSpacing = Math.max(2, Math.floor(headR * 0.35));
+    fb.setPixel(headCX - eyeSpacing, headCY + eyeOffY, eye);
+    fb.setPixel(headCX - eyeSpacing, headCY + eyeOffY + 1, eye);
+    fb.setPixel(headCX + eyeSpacing, headCY + eyeOffY, eye);
+    fb.setPixel(headCX + eyeSpacing, headCY + eyeOffY + 1, eye);
+
+    // ── Layer 8: Accessories (no-op for now) ──────────────────
+
+    // ── Layer 9: Front arm (armR) + sleeve ────────────────────
+    drawLine(fb, jx('armR'), jy('armR'), jx('handR'), jy('handR'), ARM_THICK, torso);
+    fillCircle(fb, jx('handR'), jy('handR'), HAND_RADIUS, skin);
 }

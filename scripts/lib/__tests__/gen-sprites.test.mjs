@@ -5,11 +5,16 @@ import {
     ANIMATIONS,
     ANIM_ROWS,
     SIZE_CATEGORIES,
+    FRAME_W,
+    FRAME_H,
+    FEET_Y,
     interpolatePose,
     generateAnimFrames,
     scalePose,
     generateScaledAnimFrames,
+    renderFrame,
 } from '../../gen-sprites.mjs';
+import { FrameBuffer } from '../draw.mjs';
 
 describe('interpolatePose', () => {
     /** @returns {import('../../gen-sprites.mjs').Pose} */
@@ -233,5 +238,89 @@ describe('generateScaledAnimFrames', () => {
 
     it('throws on unknown animation', () => {
         assert.throws(() => generateScaledAnimFrames('nonexistent'), /Unknown animation/);
+    });
+});
+
+describe('renderFrame', () => {
+    const TEST_VISUALS = {
+        skinColor:  [255, 200, 150, 255],
+        hairColor:  [80, 40, 20, 255],
+        torsoColor: [50, 100, 200, 255],
+        pantsColor: [40, 40, 80, 255],
+        shoeColor:  [30, 30, 30, 255],
+    };
+
+    // Standing pose — all joints at known positions
+    function standPose() {
+        const pose = {};
+        for (const j of JOINTS) pose[j] = { x: 0, y: 0 };
+        pose.root  = { x: 0, y: 0 };
+        pose.hip   = { x: 0, y: -25 };
+        pose.torso = { x: 0, y: -38 };
+        pose.head  = { x: 0, y: -52 };
+        pose.armL  = { x: -8, y: -38 };
+        pose.handL = { x: -12, y: -25 };
+        pose.armR  = { x: 8, y: -38 };
+        pose.handR = { x: 12, y: -25 };
+        pose.legL  = { x: -5, y: -12 };
+        pose.footL = { x: -5, y: 0 };
+        pose.legR  = { x: 5, y: -12 };
+        pose.footR = { x: 5, y: 0 };
+        return pose;
+    }
+
+    it('head bottom pixel = skinColor', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const pose = standPose();
+        renderFrame(pose, TEST_VISUALS, fb);
+        // Head center is at (63, 30). Hair covers upper half.
+        // Check bottom of head circle (below center, clear of hair)
+        const headCX = Math.floor(FRAME_W / 2);
+        const headCY = FEET_Y + pose.head.y;
+        const pixel = fb.getPixel(headCX, headCY + 7);
+        assert.deepEqual(pixel, TEST_VISUALS.skinColor, `Expected skin at head bottom, got ${pixel}`);
+    });
+
+    it('torso center pixel = torsoColor', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const pose = standPose();
+        renderFrame(pose, TEST_VISUALS, fb);
+        const torsoCX = Math.floor(FRAME_W / 2);
+        const torsoCY = FEET_Y + Math.floor((pose.torso.y + pose.hip.y) / 2);
+        const pixel = fb.getPixel(torsoCX, torsoCY);
+        assert.deepEqual(pixel, TEST_VISUALS.torsoColor, `Expected torso color, got ${pixel}`);
+    });
+
+    it('bottom of frame (y=125) is transparent', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const pose = standPose();
+        renderFrame(pose, TEST_VISUALS, fb);
+        // y=125 is well below feet (y=82), should be transparent
+        const pixel = fb.getPixel(Math.floor(FRAME_W / 2), 125);
+        assert.equal(pixel[3], 0, 'Bottom of frame should be transparent');
+    });
+
+    it('renders some non-transparent pixels', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const pose = standPose();
+        renderFrame(pose, TEST_VISUALS, fb);
+        let nonTransparent = 0;
+        for (let y = 0; y < FRAME_H; y++) {
+            for (let x = 0; x < FRAME_W; x++) {
+                if (fb.getPixel(x, y)[3] > 0) nonTransparent++;
+            }
+        }
+        assert.ok(nonTransparent > 100, `Expected >100 non-transparent pixels, got ${nonTransparent}`);
+    });
+
+    it('hair appears above head center', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const pose = standPose();
+        renderFrame(pose, TEST_VISUALS, fb);
+        const headCX = Math.floor(FRAME_W / 2);
+        const headCY = FEET_Y + pose.head.y;
+        // Hair should be at top of head
+        const pixel = fb.getPixel(headCX, headCY - 8);
+        assert.deepEqual(pixel, TEST_VISUALS.hairColor, `Expected hair above head, got ${pixel}`);
     });
 });
