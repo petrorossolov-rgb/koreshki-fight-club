@@ -1,8 +1,6 @@
 import { Scene } from 'phaser';
 import type { CharacterConfig } from '@shared/types';
 
-const SHARED_TEXTURE = 'martial-hero';
-
 interface MatchStats {
     hits: [number, number];
     damage: [number, number];
@@ -135,7 +133,7 @@ export class GameOver extends Scene {
             if (idleDef) {
                 this.anims.create({
                     key: animKey,
-                    frames: this.anims.generateFrameNumbers(SHARED_TEXTURE, {
+                    frames: this.anims.generateFrameNumbers(config.id, {
                         start: idleDef.frameStart,
                         end: idleDef.frameEnd,
                     }),
@@ -145,7 +143,7 @@ export class GameOver extends Scene {
             }
         }
 
-        const sprite = this.add.sprite(512, 340, SHARED_TEXTURE);
+        const sprite = this.add.sprite(512, 340, config.id);
         sprite.setOrigin(0.5, 1);
         sprite.setScale(config.scale * 2.5); // Large display
         if (tint !== 0xFFFFFF) sprite.setTint(tint);
