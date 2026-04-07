@@ -20,7 +20,7 @@
 - **Server config loading**: `charConfigs.ts` owns the Map<string, CharacterConfig>. Import `getCharConfig`/`getDefaultConfig` — never import `main.ts` directly (side effects)
 - **NetworkClient ownership**: MainMenu creates NetworkClient, transfers to CharacterSelect on room join (nulls its own ref). CharacterSelect transfers to FightScene on fight_start. Each scene clears predecessor's callbacks before transfer.
 - **Vite env vars**: `import.meta.env.VITE_WS_URL` — typed via `vite/client`, set via `.env` file or `VITE_WS_URL=... npm run build`
-- **Sprite orientation**: Martial Hero spritesheet faces LEFT by default. `setFlipX(state.facingRight)` — flip when facing right, default when facing left.
+- **Sprite orientation**: Procedural chibi sprites face RIGHT by default. `setFlipX(!state.facingRight)` — flip when facing left, default when facing right.
 - **Phaser setPath scope**: `setPath('assets')` applies to ALL subsequent loads. Reset with `setPath('')` before loading assets outside the `assets/` directory.
 - **SoundManager ownership**: MainMenu creates, passes via scene data to CharacterSelect → FightScene. Each scene calls `transferTo(this)` to update the internal scene ref.
 - **InputManager cleanup**: TouchSource creates DOM overlays (nipplejs joystick). `InputManager.destroy()` must be called on scene shutdown to remove DOM elements. Failure leaves stale joystick visible on subsequent scenes.
@@ -747,3 +747,10 @@
 - **Files changed**: `CLAUDE.md`, `docs/plan-sprites.md`, `docs/tasks-sprites.md`
 - **Learnings**: Sprites line in Tech Stack updated from "LuizMelo packs" to "Procedural chibi sprites". All 25 plan checkboxes + 16 task checkboxes marked complete.
 - **Patterns**: None new.
+
+## [2026-04-07] — INCIDENT: Attack animations face wrong direction
+- **Symptom**: During FightScene, attacks animate away from opponent (left when opponent is right, vice versa)
+- **Root cause**: Procedural chibi sprites face RIGHT by default, but `setFlipX(state.facingRight)` was written for the old martial-hero sprite which faced LEFT. The flip logic was inverted.
+- **Fix**: Changed `setFlipX(state.facingRight)` → `setFlipX(!state.facingRight)` in `Fighter.ts:52`. Updated Codebase Patterns in progress.md.
+- **Prevention**: When replacing sprite assets with different default orientation, always verify flip logic. Add a visual regression test for sprite facing direction.
+- **Time to resolve**: 1 cycle
