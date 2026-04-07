@@ -729,3 +729,9 @@
 - **Files changed**: `src/shared/__tests__/CharacterConfig.test.ts`
 - **Learnings**: Per-character spritesheet path assertion was already in place from T10. Added tint/scale/file-exists checks.
 - **Patterns**: None new — same vitest + fs.existsSync pattern.
+
+## [2026-04-07] — [T14] Redesign CharacterSelect.ts — adaptive grid + portraits (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/CharacterSelect.ts`
+- **Learnings**: Phaser game coords are always 1024×576 regardless of screen size (Scale.FIT). Use `window.innerWidth` for responsive breakpoints, not camera width. Portrait textures loaded as `${id}-portrait` by Preloader.
+- **Patterns**: Dynamic grid columns via `window.innerWidth` breakpoints (3/<480, 4/<768, 6/desktop). Cell size auto-calculated to fit available grid area. Scale pulse tween (`yoyo: true, repeat: -1`) for selection feedback — must `.stop()` before reassigning.

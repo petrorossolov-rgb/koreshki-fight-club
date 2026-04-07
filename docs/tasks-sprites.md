@@ -506,7 +506,7 @@ Based on: [docs/plan-sprites.md](docs/plan-sprites.md)
 - [x] T13: Update CharacterConfig.test.ts for per-character paths
 
 ### Wave 10
-- [ ] T14: Redesign CharacterSelect.ts — adaptive grid + portraits
+- [x] T14: Redesign CharacterSelect.ts — adaptive grid + portraits
 
 ### Wave 11
 - [ ] T15: End-to-end testing + cleanup
