@@ -524,6 +524,10 @@ export function generateScaledAnimFrames(animName, category = 'standard') {
 // ── Body part renderer ─────────────────────────────────────────────────
 
 /**
+ * @typedef {'short'|'spiky'|'dreadlocks'|'buzz'|'long'|'mohawk'|'ponytail'|'afro'} HairStyle
+ */
+
+/**
  * @typedef {{
  *   skinColor: [number,number,number,number],
  *   hairColor: [number,number,number,number],
@@ -532,6 +536,15 @@ export function generateScaledAnimFrames(animName, category = 'standard') {
  *   shoeColor: [number,number,number,number],
  *   eyeColor?: [number,number,number,number],
  *   headRadius?: number,
+ *   hairStyle?: HairStyle,
+ *   beard?: boolean,
+ *   beardColor?: [number,number,number,number],
+ *   accessories?: string[],
+ *   glassesColor?: [number,number,number,number],
+ *   helmetColor?: [number,number,number,number],
+ *   headphonesColor?: [number,number,number,number],
+ *   maskColor?: [number,number,number,number],
+ *   glovesColor?: [number,number,number,number],
  * }} Visuals
  */
 
@@ -544,9 +557,195 @@ const ARM_THICK = 4;
 const LEG_THICK = 5;
 const HAND_RADIUS = 3;
 
+// ── Hair renderer ─────────────────────────────────────────────────────
+
+/**
+ * Render hair on the character's head.
+ * @param {FrameBuffer} fb
+ * @param {number} cx — head center X
+ * @param {number} cy — head center Y
+ * @param {number} r — head radius
+ * @param {HairStyle} style
+ * @param {[number,number,number,number]} color
+ */
+export function renderHair(fb, cx, cy, r, style, color) {
+    switch (style) {
+        case 'buzz':
+            // Thin cap hugging the skull
+            fillOval(fb, cx, cy - Math.floor(r * 0.3), r + 1, Math.floor(r * 0.5), color);
+            break;
+
+        case 'short':
+            // Default short hair — slightly thicker cap
+            fillOval(fb, cx, cy - Math.floor(r * 0.4), r + 1, Math.floor(r * 0.7), color);
+            break;
+
+        case 'spiky': {
+            // Base cap + spikes pointing up
+            fillOval(fb, cx, cy - Math.floor(r * 0.35), r + 1, Math.floor(r * 0.6), color);
+            const spikeH = Math.floor(r * 0.7);
+            for (let i = -2; i <= 2; i++) {
+                const sx = cx + i * Math.floor(r * 0.35);
+                const sy = cy - r;
+                fillRect(fb, sx - 1, sy - spikeH, 3, spikeH, color);
+            }
+            break;
+        }
+
+        case 'dreadlocks': {
+            // Cap + hanging strands
+            fillOval(fb, cx, cy - Math.floor(r * 0.4), r + 2, Math.floor(r * 0.7), color);
+            const dreadLen = Math.floor(r * 1.2);
+            for (let i = -3; i <= 3; i++) {
+                const dx = cx + i * Math.floor(r * 0.3);
+                drawLine(fb, dx, cy, dx + i, cy + dreadLen, 2, color);
+            }
+            break;
+        }
+
+        case 'long': {
+            // Flows down past shoulders
+            fillOval(fb, cx, cy - Math.floor(r * 0.4), r + 2, Math.floor(r * 0.8), color);
+            const longLen = Math.floor(r * 2.0);
+            // Left side
+            fillRect(fb, cx - r - 1, cy - Math.floor(r * 0.2), 4, longLen, color);
+            // Right side
+            fillRect(fb, cx + r - 2, cy - Math.floor(r * 0.2), 4, longLen, color);
+            break;
+        }
+
+        case 'mohawk': {
+            // Tall central ridge
+            const mohawkW = Math.max(4, Math.floor(r * 0.5));
+            const mohawkH = Math.floor(r * 1.4);
+            fillRect(fb, cx - Math.floor(mohawkW / 2), cy - r - mohawkH, mohawkW, mohawkH + Math.floor(r * 0.5), color);
+            break;
+        }
+
+        case 'ponytail': {
+            // Short cap + tail extending back (to the right, since sprites face left)
+            fillOval(fb, cx, cy - Math.floor(r * 0.4), r + 1, Math.floor(r * 0.65), color);
+            const tailLen = Math.floor(r * 1.5);
+            drawLine(fb, cx + r, cy - Math.floor(r * 0.2), cx + r + tailLen, cy + Math.floor(r * 0.5), 3, color);
+            break;
+        }
+
+        case 'afro': {
+            // Large circle around head
+            const afroR = Math.floor(r * 1.7);
+            fillCircle(fb, cx, cy - Math.floor(r * 0.2), afroR, color);
+            break;
+        }
+
+        default:
+            // Fallback to short
+            fillOval(fb, cx, cy - Math.floor(r * 0.4), r + 1, Math.floor(r * 0.7), color);
+            break;
+    }
+}
+
+// ── Face renderer ─────────────────────────────────────────────────────
+
+/**
+ * Render face details: eyes and optional beard.
+ * @param {FrameBuffer} fb
+ * @param {number} cx — head center X
+ * @param {number} cy — head center Y
+ * @param {number} r — head radius
+ * @param {Visuals} visuals
+ */
+export function renderFace(fb, cx, cy, r, visuals) {
+    const eye = visuals.eyeColor ?? [0, 0, 0, 255];
+    const eyeOffY = -1;
+    const eyeSpacing = Math.max(2, Math.floor(r * 0.35));
+
+    // Eyes — 2×2 dots
+    fb.setPixel(cx - eyeSpacing, cy + eyeOffY, eye);
+    fb.setPixel(cx - eyeSpacing, cy + eyeOffY + 1, eye);
+    fb.setPixel(cx + eyeSpacing, cy + eyeOffY, eye);
+    fb.setPixel(cx + eyeSpacing, cy + eyeOffY + 1, eye);
+
+    // Optional beard
+    if (visuals.beard) {
+        const beardColor = visuals.beardColor ?? visuals.hairColor;
+        const beardTop = cy + Math.floor(r * 0.4);
+        const beardW = Math.floor(r * 0.8);
+        const beardH = Math.floor(r * 0.6);
+        fillOval(fb, cx, beardTop + Math.floor(beardH * 0.3), beardW, beardH, beardColor);
+    }
+}
+
+// ── Accessories renderer ──────────────────────────────────────────────
+
+/**
+ * Render accessories: helmet, headphones, gloves, mask, glasses.
+ * @param {FrameBuffer} fb
+ * @param {number} headCX — head center X
+ * @param {number} headCY — head center Y
+ * @param {number} headR — head radius
+ * @param {Visuals} visuals
+ */
+export function renderAccessories(fb, headCX, headCY, headR, visuals) {
+    const accessories = visuals.accessories ?? [];
+
+    for (const acc of accessories) {
+        switch (acc) {
+            case 'helmet': {
+                const hColor = visuals.helmetColor ?? [120, 120, 130, 255];
+                // Dome over head
+                fillOval(fb, headCX, headCY - Math.floor(headR * 0.5), headR + 3, Math.floor(headR * 0.9), hColor);
+                // Brim
+                fillRect(fb, headCX - headR - 3, headCY - 1, (headR + 3) * 2, 3, hColor);
+                break;
+            }
+
+            case 'headphones': {
+                const hpColor = visuals.headphonesColor ?? [60, 60, 60, 255];
+                // Band across top
+                fillRect(fb, headCX - headR - 1, headCY - headR - 2, (headR + 1) * 2, 2, hpColor);
+                // Left ear cup
+                fillCircle(fb, headCX - headR - 1, headCY, 4, hpColor);
+                // Right ear cup
+                fillCircle(fb, headCX + headR + 1, headCY, 4, hpColor);
+                break;
+            }
+
+            case 'glasses': {
+                const gColor = visuals.glassesColor ?? [40, 40, 40, 255];
+                const eyeY = headCY - 1;
+                const eyeSpacing = Math.max(2, Math.floor(headR * 0.35));
+                const lensW = Math.max(4, Math.floor(headR * 0.4));
+                const lensH = 3;
+                // Left lens
+                fillRect(fb, headCX - eyeSpacing - Math.floor(lensW / 2), eyeY - 1, lensW, lensH, gColor);
+                // Right lens
+                fillRect(fb, headCX + eyeSpacing - Math.floor(lensW / 2), eyeY - 1, lensW, lensH, gColor);
+                // Bridge
+                fillRect(fb, headCX - 1, eyeY, 3, 1, gColor);
+                break;
+            }
+
+            case 'mask': {
+                const mColor = visuals.maskColor ?? [20, 20, 20, 255];
+                // Covers lower face
+                const maskTop = headCY + 1;
+                const maskW = Math.floor(headR * 0.9);
+                const maskH = Math.floor(headR * 0.6);
+                fillOval(fb, headCX, maskTop + Math.floor(maskH * 0.3), maskW, maskH, mColor);
+                break;
+            }
+
+            case 'gloves':
+                // Gloves override hand color — handled in renderFrame hand drawing
+                // No extra geometry needed here; glovesColor applied at hand rendering
+                break;
+        }
+    }
+}
+
 /**
  * Render a single chibi frame onto a FrameBuffer.
- * 9 layers: backArm, backLeg, torso, frontLeg, head(skin), hair(placeholder), face(eyes), accessories(no-op), frontArm
+ * 9 layers: backArm, backLeg, torso, frontLeg, head(skin), hair, face(eyes+beard), accessories, frontArm
  *
  * @param {Pose} pose — joint positions relative to root (0,0 = feet)
  * @param {Visuals} visuals — character colors
@@ -565,12 +764,13 @@ export function renderFrame(pose, visuals, fb) {
     const pants = visuals.pantsColor;
     const shoe = visuals.shoeColor;
     const hair = visuals.hairColor;
-    const eye = visuals.eyeColor ?? [0, 0, 0, 255];
     const headR = visuals.headRadius ?? 10;
+    const hasGloves = (visuals.accessories ?? []).includes('gloves');
+    const handColor = hasGloves ? (visuals.glovesColor ?? [60, 20, 20, 255]) : skin;
 
     // ── Layer 1: Back arm (armL) + sleeve ──────────────────────
     drawLine(fb, jx('armL'), jy('armL'), jx('handL'), jy('handL'), ARM_THICK, torso);
-    fillCircle(fb, jx('handL'), jy('handL'), HAND_RADIUS, skin);
+    fillCircle(fb, jx('handL'), jy('handL'), HAND_RADIUS, handColor);
 
     // ── Layer 2: Back leg (legL) + pants + shoe ───────────────
     drawLine(fb, jx('legL'), jy('legL'), jx('footL'), jy('footL'), LEG_THICK, pants);
@@ -593,22 +793,18 @@ export function renderFrame(pose, visuals, fb) {
     const headCY = jy('head');
     fillCircle(fb, headCX, headCY, headR, skin);
 
-    // ── Layer 6: Hair (placeholder — solid cap on top) ────────
-    fillOval(fb, headCX, headCY - Math.floor(headR * 0.4), headR + 1, Math.floor(headR * 0.7), hair);
+    // ── Layer 6: Hair ──────────────────────────────────────────
+    renderHair(fb, headCX, headCY, headR, visuals.hairStyle ?? 'short', hair);
 
-    // ── Layer 7: Face (eyes) ──────────────────────────────────
-    const eyeOffY = -1;
-    const eyeSpacing = Math.max(2, Math.floor(headR * 0.35));
-    fb.setPixel(headCX - eyeSpacing, headCY + eyeOffY, eye);
-    fb.setPixel(headCX - eyeSpacing, headCY + eyeOffY + 1, eye);
-    fb.setPixel(headCX + eyeSpacing, headCY + eyeOffY, eye);
-    fb.setPixel(headCX + eyeSpacing, headCY + eyeOffY + 1, eye);
+    // ── Layer 7: Face (eyes + beard) ─────────────────────────
+    renderFace(fb, headCX, headCY, headR, visuals);
 
-    // ── Layer 8: Accessories (no-op for now) ──────────────────
+    // ── Layer 8: Accessories ─────────────────────────────────
+    renderAccessories(fb, headCX, headCY, headR, visuals);
 
     // ── Layer 9: Front arm (armR) + sleeve ────────────────────
     drawLine(fb, jx('armR'), jy('armR'), jx('handR'), jy('handR'), ARM_THICK, torso);
-    fillCircle(fb, jx('handR'), jy('handR'), HAND_RADIUS, skin);
+    fillCircle(fb, jx('handR'), jy('handR'), HAND_RADIUS, handColor);
 }
 
 // ── Sheet assembly ────────────────────────────────────────────────────
@@ -654,6 +850,7 @@ export const CHARACTER_VISUALS = {
             torsoColor: [50, 120, 200, 255],
             pantsColor: [40, 40, 80, 255],
             shoeColor:  [30, 30, 30, 255],
+            hairStyle:  'short',
         },
     },
 };

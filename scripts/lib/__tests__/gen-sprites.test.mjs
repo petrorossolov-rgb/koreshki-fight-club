@@ -17,6 +17,9 @@ import {
     scalePose,
     generateScaledAnimFrames,
     renderFrame,
+    renderHair,
+    renderFace,
+    renderAccessories,
     assembleSheet,
     CHARACTER_VISUALS,
 } from '../../gen-sprites.mjs';
@@ -380,5 +383,129 @@ describe('assembleSheet', () => {
     it('petyaj is defined with tall category', () => {
         assert.ok(CHARACTER_VISUALS.petyaj, 'petyaj should be defined');
         assert.equal(CHARACTER_VISUALS.petyaj.category, 'tall');
+    });
+});
+
+// ── T07: Hair styles ──────────────────────────────────────────────────
+
+describe('renderHair', () => {
+    const HAIR_STYLES = ['short', 'spiky', 'dreadlocks', 'buzz', 'long', 'mohawk', 'ponytail', 'afro'];
+    const hairColor = [80, 40, 20, 255];
+    const headR = 10;
+    const cx = 63;
+    const cy = 30;
+
+    for (const style of HAIR_STYLES) {
+        it(`${style}: draws pixels above head center`, () => {
+            const fb = new FrameBuffer(FRAME_W, FRAME_H);
+            renderHair(fb, cx, cy, headR, style, hairColor);
+            // At least one pixel above head center should be hairColor
+            let found = false;
+            for (let y = 0; y < cy; y++) {
+                for (let x = 0; x < FRAME_W; x++) {
+                    const p = fb.getPixel(x, y);
+                    if (p[0] === hairColor[0] && p[1] === hairColor[1] && p[2] === hairColor[2] && p[3] === hairColor[3]) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+            assert.ok(found, `${style}: expected hair pixels above head center`);
+        });
+    }
+
+    it('afro: pixels extend beyond headRadius from center', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        renderHair(fb, cx, cy, headR, 'afro', hairColor);
+        // Check pixels at distance > headR from head center
+        let foundFar = false;
+        for (let y = 0; y < FRAME_H; y++) {
+            for (let x = 0; x < FRAME_W; x++) {
+                const p = fb.getPixel(x, y);
+                if (p[0] === hairColor[0] && p[1] === hairColor[1] && p[2] === hairColor[2] && p[3] === hairColor[3]) {
+                    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+                    if (dist > headR + 2) {
+                        foundFar = true;
+                        break;
+                    }
+                }
+            }
+            if (foundFar) break;
+        }
+        assert.ok(foundFar, 'afro should have pixels beyond headRadius');
+    });
+});
+
+// ── T08: Face details ─────────────────────────────────────────────────
+
+describe('renderFace', () => {
+    it('draws eyes at head center level', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const visuals = { eyeColor: [0, 0, 0, 255], hairColor: [80, 40, 20, 255] };
+        renderFace(fb, 63, 30, 10, visuals);
+        const eyeSpacing = Math.max(2, Math.floor(10 * 0.35));
+        const p = fb.getPixel(63 - eyeSpacing, 29);
+        assert.deepEqual(p, [0, 0, 0, 255], 'Expected eye pixel');
+    });
+
+    it('beard draws pixels below head center', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const beardColor = [100, 50, 25, 255];
+        const visuals = { beard: true, beardColor, hairColor: [80, 40, 20, 255] };
+        renderFace(fb, 63, 30, 10, visuals);
+        let found = false;
+        for (let y = 35; y < 50; y++) {
+            const p = fb.getPixel(63, y);
+            if (p[0] === beardColor[0] && p[1] === beardColor[1] && p[2] === beardColor[2] && p[3] === beardColor[3]) {
+                found = true;
+                break;
+            }
+        }
+        assert.ok(found, 'Expected beard pixels below head center');
+    });
+});
+
+// ── T08: Accessories ──────────────────────────────────────────────────
+
+describe('renderAccessories', () => {
+    it('glasses: pixels at eye level', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const gColor = [40, 40, 40, 255];
+        const visuals = { accessories: ['glasses'], glassesColor: gColor };
+        renderAccessories(fb, 63, 30, 10, visuals);
+        // Bridge at center, eye level
+        const p = fb.getPixel(63, 29);
+        assert.deepEqual(p, gColor, 'Expected glasses bridge pixel');
+    });
+
+    it('helmet: pixels above head', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const hColor = [120, 120, 130, 255];
+        const visuals = { accessories: ['helmet'], helmetColor: hColor };
+        renderAccessories(fb, 63, 30, 10, visuals);
+        // Check above head
+        let found = false;
+        for (let y = 15; y < 25; y++) {
+            const p = fb.getPixel(63, y);
+            if (p[0] === hColor[0] && p[1] === hColor[1] && p[2] === hColor[2] && p[3] === hColor[3]) {
+                found = true;
+                break;
+            }
+        }
+        assert.ok(found, 'Expected helmet pixels above head');
+    });
+
+    it('no accessories: no extra pixels', () => {
+        const fb = new FrameBuffer(FRAME_W, FRAME_H);
+        const visuals = { accessories: [] };
+        renderAccessories(fb, 63, 30, 10, visuals);
+        let nonTransparent = 0;
+        for (let y = 0; y < FRAME_H; y++) {
+            for (let x = 0; x < FRAME_W; x++) {
+                if (fb.getPixel(x, y)[3] > 0) nonTransparent++;
+            }
+        }
+        assert.equal(nonTransparent, 0, 'No accessories should produce no pixels');
     });
 });
