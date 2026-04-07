@@ -754,3 +754,10 @@
 - **Fix**: Changed `setFlipX(state.facingRight)` → `setFlipX(!state.facingRight)` in `Fighter.ts:52`. Updated Codebase Patterns in progress.md.
 - **Prevention**: When replacing sprite assets with different default orientation, always verify flip logic. Add a visual regression test for sprite facing direction.
 - **Time to resolve**: 1 cycle
+
+## [2026-04-07] — INCIDENT: Fullscreen button unreachable on mobile portrait
+- **Symptom**: FULLSCREEN button on MainMenu doesn't respond to taps on mobile
+- **Root cause**: `#portrait-warning` overlay (`z-index: 9999`, `inset: 0`, opaque background) covers the entire screen in portrait orientation on touch devices, blocking all pointer events to the Phaser canvas underneath. The in-game FULLSCREEN button (Phaser text object) was invisible and untappable behind this overlay.
+- **Fix**: Added a DOM `<button id="portrait-fs-btn">` inside the portrait-warning overlay itself, with JS handler in `main.ts` that calls `requestFullscreen()` + `orientation.lock('landscape')`. Styled in `style.css`.
+- **Prevention**: Any full-screen blocking overlay must include essential actions (like fullscreen entry) as DOM elements within itself, not rely on underlying canvas being reachable.
+- **Time to resolve**: 1 cycle
