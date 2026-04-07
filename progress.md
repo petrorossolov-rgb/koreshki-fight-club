@@ -25,6 +25,7 @@
 - **SoundManager ownership**: MainMenu creates, passes via scene data to CharacterSelect → FightScene. Each scene calls `transferTo(this)` to update the internal scene ref.
 - **InputManager cleanup**: TouchSource creates DOM overlays (nipplejs joystick). `InputManager.destroy()` must be called on scene shutdown to remove DOM elements. Failure leaves stale joystick visible on subsequent scenes.
 - **iOS Safari**: viewport meta needs `viewport-fit=cover, user-scalable=no`. CSS: `100dvh` height, `safe-area-inset-*` padding. Fullscreen API: webkit prefix. Pinch-to-zoom blocked via `touch-action: none` + `gesturestart` preventDefault.
+- **Script tests**: `scripts/lib/__tests__/` uses `node:test` + `node:assert` (not vitest). Run with `node --test scripts/lib/__tests__/*.test.mjs`
 
 ## Docs Debt
 <!-- Items logged by /execute, /change, /incident. Resolved by /sync-docs. -->
@@ -582,6 +583,18 @@
 - **Fix**: Changed frame ranges — punch: 44-48 @20fps (fast), kick: 44-50 @12fps (slower/heavier). Both now start from full-body frames. All 18 configs regenerated.
 - **Prevention**: Always visually inspect spritesheet frames before setting animation ranges. Avoid using mid-animation transition frames as start frames.
 - **Time to resolve**: 1 cycle (spritesheet visual inspection identified the cause immediately)
+
+## [2026-04-06] — [T01] Extract shared PNG encoder to scripts/lib/png.mjs (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/lib/png.mjs` (new), `scripts/lib/__tests__/png.test.mjs` (new), `scripts/gen-bg.mjs`, `scripts/gen-logo.mjs`
+- **Learnings**: Both gen-bg.mjs and gen-logo.mjs had identical crc32/chunk/PNG assembly code. Extracted to shared module with zero behavioral change (byte-identical output verified).
+- **Patterns**: `encodePNG(width, height, rgbaBuffer)` — expects raw RGBA Buffer, returns complete PNG Buffer. Tests use `node:test` runner (not vitest) for scripts/ directory.
+
+## [2026-04-07] — [T02] Drawing primitives library (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/lib/draw.mjs` (new), `scripts/lib/__tests__/draw.test.mjs` (new)
+- **Learnings**: drawLine with thickness uses circle-stamping along Bresenham path — simpler than perpendicular expansion and produces rounder endpoints. All primitives clip via setPixel bounds check.
+- **Patterns**: `FrameBuffer(w,h)` — RGBA buffer with getPixel/setPixel/clear/toBuffer. `toBuffer()` returns raw RGBA compatible with `encodePNG()`. Coordinates are Math.round()'d for sub-pixel tolerance.
 
 ## [2026-04-05] — INCIDENT: No visible floor, fighters floating in sky
 - **Symptom**: FightScene shows solid blue gradient sky, no ground, fighters appear to float
