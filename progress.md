@@ -717,3 +717,9 @@
 - **Files changed**: `src/game/entities/Fighter.ts`, `src/shared/__tests__/CharacterConfig.test.ts`
 - **Learnings**: With tint always 0xFFFFFF, flash recovery simplifies to just `clearTint()`. CharacterConfig test needed immediate update (was asserting shared spritesheet path).
 - **Patterns**: Texture key = `config.id` everywhere (sprite creation, loadAssets, generateFrameNumbers). No more SHARED_TEXTURE constant.
+
+## [2026-04-07] — [T12] Update Preloader.ts for dynamic spritesheet loading (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/Preloader.ts`
+- **Learnings**: Two-phase Phaser loading: preload() for manifest/audio/logo, create() reads manifest and queues character assets via `this.load.start()`. Progress bar from init() works across both phases since the `progress` listener is on the LoaderPlugin.
+- **Patterns**: `this.load.once('complete', callback)` + `this.load.start()` in create() for second-pass dynamic loading based on phase-1 data.
