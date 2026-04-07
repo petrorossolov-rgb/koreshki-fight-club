@@ -735,3 +735,15 @@
 - **Files changed**: `src/game/scenes/CharacterSelect.ts`
 - **Learnings**: Phaser game coords are always 1024×576 regardless of screen size (Scale.FIT). Use `window.innerWidth` for responsive breakpoints, not camera width. Portrait textures loaded as `${id}-portrait` by Preloader.
 - **Patterns**: Dynamic grid columns via `window.innerWidth` breakpoints (3/<480, 4/<768, 6/desktop). Cell size auto-calculated to fit available grid area. Scale pulse tween (`yoyo: true, repeat: -1`) for selection feedback — must `.stop()` before reassigning.
+
+## [2026-04-07] — [T15] End-to-end testing + cleanup (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `src/game/scenes/GameOver.ts`, `public/assets/fighters/martial-hero.png` (deleted), `scripts/combine-sprites.mjs` (deleted)
+- **Learnings**: GameOver.ts still had SHARED_TEXTURE = 'martial-hero' — needed update to use config.id. combine-sprites.mjs was an obsolete script (used sharp for external PNG combining), superseded by gen-sprites.mjs.
+- **Patterns**: After removing shared texture, grep src/ and scripts/ for residual references before committing.
+
+## [2026-04-07] — [T16] Update CLAUDE.md + documentation (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `CLAUDE.md`, `docs/plan-sprites.md`, `docs/tasks-sprites.md`
+- **Learnings**: Sprites line in Tech Stack updated from "LuizMelo packs" to "Procedural chibi sprites". All 25 plan checkboxes + 16 task checkboxes marked complete.
+- **Patterns**: None new.
