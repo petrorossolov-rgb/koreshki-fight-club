@@ -29,15 +29,10 @@ export class Preloader extends Scene
 
     preload ()
     {
-        //  Load the assets for the game
+        // Phase 1: manifest, logo, audio, default config
         this.load.setPath('assets');
         this.load.image('logo', 'logo.png');
-        this.load.spritesheet('martial-hero', 'fighters/martial-hero.png', {
-            frameWidth: 126,
-            frameHeight: 126,
-        });
 
-        // Audio assets (reset path first — setPath applies to all subsequent loads)
         this.load.setPath('assets/audio');
         this.load.audio('bgm_menu', 'bgm_menu.wav');
         this.load.audio('bgm_fight', 'bgm_fight.wav');
@@ -58,10 +53,24 @@ export class Preloader extends Scene
 
     create ()
     {
-        //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
-        //  For example, you can define global animations here, so we can use them in other scenes.
+        // Phase 2: read manifest, dynamically load all character spritesheets + portraits
+        const manifest = this.cache.json.get('char_manifest') as { characters: Array<{ id: string }> };
+        const characters = manifest.characters;
 
-        //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
-        this.scene.start('MainMenu');
+        this.load.setPath('assets/fighters');
+        for (const char of characters) {
+            this.load.spritesheet(char.id, `${char.id}.png`, {
+                frameWidth: 126,
+                frameHeight: 126,
+            });
+            this.load.image(`${char.id}-portrait`, `${char.id}-portrait.png`);
+        }
+        this.load.setPath('');
+
+        this.load.once('complete', () => {
+            this.scene.start('MainMenu');
+        });
+
+        this.load.start();
     }
 }
