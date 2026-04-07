@@ -72,8 +72,8 @@ describe('Character configs (via manifest)', () => {
             expect(config.nickname).toBeTypeOf('string');
         });
 
-        it('references shared spritesheet', () => {
-            expect(config.spriteSheet).toBe('assets/fighters/martial-hero.png');
+        it('references per-character spritesheet', () => {
+            expect(config.spriteSheet).toBe(`assets/fighters/${entry.id}.png`);
         });
 
         it('has valid numeric stats', () => {

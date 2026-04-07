@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
 import type { CharacterConfig, FighterState } from '@shared/types';
 
-const SHARED_TEXTURE = 'martial-hero';
-
 // Origin Y placed at the character's feet within the 126px frame.
 // Measured: lowest non-transparent pixel is at y=81 → (81+1)/126 ≈ 0.651.
 // Scaling happens around origin, so feet stay pinned to state.y at any scale.
@@ -34,16 +32,15 @@ export class Fighter {
 
         this.createAnimations(scene);
 
-        this.sprite = scene.add.sprite(0, 0, SHARED_TEXTURE);
+        this.sprite = scene.add.sprite(0, 0, config.id);
         this.sprite.setOrigin(0.5, FEET_ORIGIN_Y);
         this.sprite.setScale(config.scale);
-        if (config.tint !== 0xFFFFFF) this.sprite.setTint(config.tint);
     }
 
-    /** Preload shared spritesheet (skip if already loaded). */
+    /** Preload character spritesheet (skip if already loaded). */
     static loadAssets(scene: Phaser.Scene, config: CharacterConfig): void {
-        if (scene.textures.exists(SHARED_TEXTURE)) return;
-        scene.load.spritesheet(SHARED_TEXTURE, config.spriteSheet, {
+        if (scene.textures.exists(config.id)) return;
+        scene.load.spritesheet(config.id, config.spriteSheet, {
             frameWidth: config.frameWidth,
             frameHeight: config.frameHeight,
         });
@@ -81,12 +78,7 @@ export class Fighter {
         if (this.flashFrames > 0) {
             this.flashFrames--;
             if (this.flashFrames === 0) {
-                // Restore original tint
-                if (this.config.tint !== 0xFFFFFF) {
-                    this.sprite.setTint(this.config.tint);
-                } else {
-                    this.sprite.clearTint();
-                }
+                this.sprite.clearTint();
             }
         }
     }
@@ -108,7 +100,7 @@ export class Fighter {
             if (scene.anims.exists(key)) continue;
             scene.anims.create({
                 key,
-                frames: scene.anims.generateFrameNumbers(SHARED_TEXTURE, {
+                frames: scene.anims.generateFrameNumbers(this.config.id, {
                     start: def.frameStart,
                     end: def.frameEnd,
                 }),
