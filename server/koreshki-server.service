@@ -1,0 +1,17 @@
+[Unit]
+Description=Koreshki Fight Club Game Server
+After=network.target
+
+[Service]
+Type=simple
+User=koreshki
+WorkingDirectory=/opt/koreshki-fight-club
+ExecStart=/home/koreshki/.deno/bin/deno run --allow-net --allow-read --allow-env --config server/deno.json server/main.ts
+Restart=always
+RestartSec=5
+Environment=PORT=8000
+Environment=CORS_ORIGIN=https://petrorossolov-rgb.github.io
+Environment=CLIENT_URL=https://petrorossolov-rgb.github.io/koreshki-fight-club
+
+[Install]
+WantedBy=multi-user.target

@@ -27,7 +27,7 @@ vite/           — Vite build configs
 - **Engine:** Phaser 3.90 (TypeScript)
 - **Bundler:** Vite 6
 - **Hosting (client):** GitHub Pages
-- **Hosting (server):** Deno Deploy
+- **Hosting (server):** VPS (Deno + nginx + systemd), domain: koreshki-fight-club.duckdns.org
 - **Sprites:** Procedural chibi sprites (generated via `scripts/gen-sprites.mjs`)
 - **Touch controls:** nipplejs + custom buttons
 

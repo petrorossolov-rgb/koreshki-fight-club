@@ -9,49 +9,71 @@ The client is a static Vite build deployed to GitHub Pages via GitHub Actions.
 1. Push the repo to GitHub
 2. Go to **Settings > Pages > Source** and select **GitHub Actions**
 3. Go to **Settings > Variables and secrets > Actions > Variables** and add:
-   - `VITE_WS_URL` — production WebSocket URL (e.g. `wss://koreshki-server.deno.dev/ws`)
+   - `VITE_WS_URL` — production WebSocket URL: `wss://koreshki-fight-club.duckdns.org/ws`
 4. Push to `main` — the workflow builds and deploys automatically
 
 ### Manual build
 
 ```bash
-VITE_WS_URL=wss://your-server.deno.dev/ws npm run build
+VITE_WS_URL=wss://koreshki-fight-club.duckdns.org/ws npm run build
 ```
 
 Output is in `dist/`.
 
 ---
 
-## Server — Deno Deploy
+## Server — VPS (Deno + nginx + systemd)
 
-The server is a Deno WebSocket server deployed to [Deno Deploy](https://dash.deno.com).
+The server runs on a VPS at `koreshki-fight-club.duckdns.org`. Nginx handles SSL termination and reverse proxies to the Deno process on port 8000.
+
+### Infrastructure
+
+- **VPS:** Ubuntu 24.04, 1 CPU, 512MB RAM
+- **Domain:** koreshki-fight-club.duckdns.org (free DuckDNS subdomain)
+- **SSL:** Let's Encrypt via certbot (auto-renew)
+- **Process manager:** systemd (`koreshki-server.service`)
+- **Reverse proxy:** nginx (HTTPS/WSS → localhost:8000)
 
 ### Environment variables
 
-| Variable | Default | Description |
+Set in `/etc/systemd/system/koreshki-server.service`:
+
+| Variable | Value | Description |
 |---|---|---|
-| `PORT` | `8000` | HTTP server port (Deno Deploy sets this automatically) |
-| `CORS_ORIGIN` | `*` | Allowed CORS origin (set to your Pages URL in production) |
-| `CLIENT_URL` | `http://localhost:5173` | Client base URL for invite link redirects (`/join/:code` → `CLIENT_URL?room=CODE`) |
+| `PORT` | `8000` | HTTP server port |
+| `CORS_ORIGIN` | `https://petrorossolov-rgb.github.io` | Allowed CORS origin |
+| `CLIENT_URL` | `https://petrorossolov-rgb.github.io/koreshki-fight-club` | Client URL for invite redirects |
 
-### Deploy via `deployctl`
+### Auto-deploy
 
-1. Install: `deno install -Arf jsr:@deno/deployctl`
-2. Link project: `deployctl deploy --project=koreshki-server --entrypoint=server/main.ts`
-3. Set env vars in Deno Deploy dashboard: **Settings > Environment Variables**
-   - `CORS_ORIGIN` = `https://<username>.github.io`
-   - `CLIENT_URL` = `https://<username>.github.io/<repo-name>`
+Push to `main` (files in `server/`) triggers `.github/workflows/deploy-server.yml`:
+1. SSH into VPS as `koreshki`
+2. `git pull origin main`
+3. `sudo systemctl restart koreshki-server`
+4. Health check: `curl http://localhost:8000/health`
 
-### Deploy via GitHub integration
+Requires GitHub secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`.
 
-1. Create a project on [dash.deno.com](https://dash.deno.com)
-2. Link the GitHub repo
-3. Set entrypoint: `server/main.ts`
-4. Set env vars in project settings
+### Manual deploy
+
+```bash
+ssh koreshki@194.67.66.221
+cd /opt/koreshki-fight-club
+git pull
+sudo systemctl restart koreshki-server
+```
+
+### First-time setup
+
+```bash
+ssh root@VPS_IP 'bash -s' < server/deploy.sh
+```
+
+See also: `server/nginx.conf.example`, `server/koreshki-server.service`.
 
 ### Character config loading
 
-The server loads all 17 character configs at startup from `public/data/characters/manifest.json` via `server/charConfigs.ts`. Each player's character selection is validated against loaded configs. Per-player configs are passed to `startGameRoom()`.
+The server loads all 17 character configs at startup from `public/data/characters/manifest.json` via `server/charConfigs.ts`. Each player's character selection is validated against loaded configs.
 
 - Manifest: `public/data/characters/manifest.json`
 - Config module: `server/charConfigs.ts` — exports `getCharConfig(id)`, `getDefaultConfig()`, `getAllCharIds()`
@@ -73,9 +95,9 @@ Default client connects to `ws://localhost:8000/ws`.
 
 ## Production checklist
 
-- [ ] `VITE_WS_URL` points to production server (`wss://...`)
-- [ ] `CORS_ORIGIN` set to Pages URL (not `*`)
-- [ ] `CLIENT_URL` set to Pages URL (for `/join/:code` invite redirects)
+- [x] `VITE_WS_URL` points to production server (`wss://koreshki-fight-club.duckdns.org/ws`)
+- [x] `CORS_ORIGIN` set to Pages URL (not `*`)
+- [x] `CLIENT_URL` set to Pages URL (for `/join/:code` invite redirects)
 - [ ] Server `/health` endpoint responds with 200
 - [ ] WebSocket connects from deployed client
 - [ ] Invite link redirect works: `https://server/join/ABCD` → client with `?room=ABCD`
