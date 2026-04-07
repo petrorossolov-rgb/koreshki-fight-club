@@ -2,7 +2,7 @@
   "id": "vlad",
   "name": "vlad",
   "displayName": "Влад",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/vlad.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Борец-строитель. Кладёт кирпичи и соперников.",
   "nickname": "Vladi",
   "scale": 1,
-  "tint": 16750848,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,

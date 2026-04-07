@@ -2,7 +2,7 @@
   "id": "kostyan",
   "name": "kostyan",
   "displayName": "Костян",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/kostyan.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Безумный сноубордист. Спускается с горы прямо на тебя.",
   "nickname": "Kost",
   "scale": 1,
-  "tint": 47359,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,

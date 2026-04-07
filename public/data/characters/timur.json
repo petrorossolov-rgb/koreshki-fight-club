@@ -2,7 +2,7 @@
   "id": "timur",
   "name": "timur",
   "displayName": "Тимур",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/timur.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Безумный неформал. Наказывает всех, кто слушает попсу.",
   "nickname": "The punisher",
   "scale": 1,
-  "tint": 2631720,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,

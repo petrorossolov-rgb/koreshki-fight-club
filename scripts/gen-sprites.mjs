@@ -1049,6 +1049,68 @@ export const CHARACTER_VISUALS = {
     },
 };
 
+// ── Portrait generation ──────────────────────────────────────────────
+
+/** Portrait size */
+const PORTRAIT_SIZE = 200;
+
+/**
+ * Generate a portrait PNG: head + upper torso from idle frame 0, scaled to fit ~200×200.
+ * @param {string} id
+ * @param {Visuals} visuals
+ * @param {keyof typeof SIZE_CATEGORIES} [category='standard']
+ * @returns {Buffer} PNG buffer
+ */
+export function generatePortrait(id, visuals, category = 'standard') {
+    // Render idle frame 0 at full size
+    const poses = generateScaledAnimFrames('idle', category);
+    const pose = poses[0];
+    const frameFb = new FrameBuffer(FRAME_W, FRAME_H);
+    renderFrame(pose, visuals, frameFb);
+
+    // Crop to head + upper torso region
+    // Head center is at ROOT_Y + pose.head.y, torso ends at ROOT_Y + pose.hip.y
+    const headCY = ROOT_Y + pose.head.y;
+    const headR = visuals.headRadius ?? 10;
+    // Top: above head (hair/accessories margin)
+    const cropTop = Math.max(0, headCY - headR - 15);
+    // Bottom: just below hip
+    const hipY = ROOT_Y + pose.hip.y;
+    const cropBottom = Math.min(FRAME_H, hipY + 8);
+    // Left/right: center ± enough to capture arms
+    const centerX = ROOT_X;
+    const halfW = Math.max(25, headR + 20);
+    const cropLeft = Math.max(0, centerX - halfW);
+    const cropRight = Math.min(FRAME_W, centerX + halfW);
+
+    const cropW = cropRight - cropLeft;
+    const cropH = cropBottom - cropTop;
+
+    // Scale to fit PORTRAIT_SIZE while maintaining aspect ratio
+    const scale = Math.min(PORTRAIT_SIZE / cropW, PORTRAIT_SIZE / cropH);
+    const outW = Math.round(cropW * scale);
+    const outH = Math.round(cropH * scale);
+
+    // Create portrait framebuffer centered in PORTRAIT_SIZE×PORTRAIT_SIZE
+    const portrait = new FrameBuffer(PORTRAIT_SIZE, PORTRAIT_SIZE);
+    const offsetX = Math.floor((PORTRAIT_SIZE - outW) / 2);
+    const offsetY = Math.floor((PORTRAIT_SIZE - outH) / 2);
+
+    // Nearest-neighbor scale blit from cropped region
+    for (let py = 0; py < outH; py++) {
+        const srcY = cropTop + Math.floor(py / scale);
+        for (let px = 0; px < outW; px++) {
+            const srcX = cropLeft + Math.floor(px / scale);
+            const pixel = frameFb.getPixel(srcX, srcY);
+            if (pixel[3] > 0) {
+                portrait.setPixel(offsetX + px, offsetY + py, pixel);
+            }
+        }
+    }
+
+    return encodePNG(PORTRAIT_SIZE, PORTRAIT_SIZE, portrait.toBuffer());
+}
+
 // ── CLI ───────────────────────────────────────────────────────────────
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1056,7 +1118,7 @@ const __dirname = dirname(__filename);
 const FIGHTERS_DIR = join(__dirname, '..', 'public', 'assets', 'fighters');
 
 /**
- * Generate spritesheet PNG for a character.
+ * Generate spritesheet + portrait PNGs for a character.
  * @param {string} id
  */
 function generateCharacter(id) {
@@ -1066,11 +1128,19 @@ function generateCharacter(id) {
         console.error(`Available: ${Object.keys(CHARACTER_VISUALS).join(', ')}`);
         process.exit(1);
     }
-    const png = assembleSheet(id, entry.visuals, entry.category);
     mkdirSync(FIGHTERS_DIR, { recursive: true });
+
+    // Spritesheet
+    const png = assembleSheet(id, entry.visuals, entry.category);
     const outPath = join(FIGHTERS_DIR, `${id}.png`);
     writeFileSync(outPath, png);
-    console.log(`Generated: ${outPath} (${(png.length / 1024).toFixed(1)} KB)`);
+    console.log(`  sheet: ${id}.png (${(png.length / 1024).toFixed(1)} KB)`);
+
+    // Portrait
+    const portrait = generatePortrait(id, entry.visuals, entry.category);
+    const portraitPath = join(FIGHTERS_DIR, `${id}-portrait.png`);
+    writeFileSync(portraitPath, portrait);
+    console.log(`  portrait: ${id}-portrait.png (${(portrait.length / 1024).toFixed(1)} KB)`);
 }
 
 // Run only when executed directly (not imported)

@@ -2,7 +2,7 @@
   "id": "serega-ermaque",
   "name": "serega-ermaque",
   "displayName": "Серёга",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/serega-ermaque.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Безумный диджей. Миксует треки и кулаки.",
   "nickname": "Ermaque",
   "scale": 1,
-  "tint": 10027263,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,

@@ -2,7 +2,7 @@
   "id": "leha",
   "name": "leha",
   "displayName": "Лёха",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/leha.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Тайский боксер и учитель. Ставит двойки и апперкоты.",
   "nickname": "Bolgar",
   "scale": 1,
-  "tint": 16763904,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,

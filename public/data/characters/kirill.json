@@ -2,7 +2,7 @@
   "id": "kirill",
   "name": "kirill",
   "displayName": "Кирилл",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/kirill.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Безумный дизайнер. Бьёт красиво — с анимацией и эффектами.",
   "nickname": "Kerel",
   "scale": 1,
-  "tint": 10494192,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,

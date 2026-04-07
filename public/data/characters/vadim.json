@@ -2,7 +2,7 @@
   "id": "vadim",
   "name": "vadim",
   "displayName": "Вадим",
-  "spriteSheet": "assets/fighters/martial-hero.png",
+  "spriteSheet": "assets/fighters/vadim.png",
   "frameWidth": 126,
   "frameHeight": 126,
   "animations": {
@@ -223,7 +223,7 @@
   "description": "Репер-военный. Читает рэп так, что противник сдаётся до боя.",
   "nickname": "Vadson aka Vendetta",
   "scale": 1,
-  "tint": 7368816,
+  "tint": 16777215,
   "portraitFrame": 0,
   "maxHp": 1000,
   "groundOffset": 0,
