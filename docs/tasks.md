@@ -1095,56 +1095,56 @@ T32 (server) runs in parallel after T08 + T30 are done.
 ## Progress Tracker
 
 ### Wave 0
-- [ ] T01: Extend types for combo system + GameEvent
-- [ ] T11: Source CC0 SFX assets
-- [ ] T12: Source CC0 music
-- [ ] T26: Fix mobile room code input
-- [ ] T27: URL-based room join
-- [ ] T29: Server /join redirect route
-- [ ] T30: Auto-reconnect server grace timer
+- [x] T01: Extend types for combo system + GameEvent
+- [x] T11: Source CC0 SFX assets
+- [x] T12: Source CC0 music
+- [x] T26: Fix mobile room code input
+- [x] T27: URL-based room join
+- [x] T29: Server /join redirect route
+- [x] T30: Auto-reconnect server grace timer
 
 ### Wave 1
-- [ ] T02: Chain cancel + special move in FSM
-- [ ] T03: GameEvent emission + combo tracking in FightEngine
-- [ ] T07: Update gen-characters.mjs with new moves
-- [ ] T08: Regenerate 17 character JSON configs
+- [x] T02: Chain cancel + special move in FSM
+- [x] T03: GameEvent emission + combo tracking in FightEngine
+- [x] T07: Update gen-characters.mjs with new moves
+- [x] T08: Regenerate 17 character JSON configs
 
 ### Wave 2
-- [ ] T04: Crouch attack in FSM
-- [ ] T05: Jump attack in FSM + landing fix
-- [ ] T06: Hitstun scaling
+- [x] T04: Crouch attack in FSM
+- [x] T05: Jump attack in FSM + landing fix
+- [x] T06: Hitstun scaling
 
 ### Wave 3
-- [ ] T09: FighterFSM comprehensive tests
-- [ ] T13: Hit flash + hit-stop zoom
-- [ ] T16: Screen shake
-- [ ] T17: HitSpark particle effect
-- [ ] T22: HealthBar improvements
-- [ ] T22b: RoundDisplay improvements
+- [x] T09: FighterFSM comprehensive tests
+- [x] T13: Hit flash + hit-stop zoom
+- [x] T16: Screen shake
+- [x] T17: HitSpark particle effect
+- [x] T22: HealthBar improvements
+- [x] T22b: RoundDisplay improvements
 
 ### Wave 4
-- [ ] T10: FightEngine comprehensive tests
-- [ ] T14: ComboCounter + CooldownIndicator UI
-- [ ] T15: Wire combo UI + events into FightScene
-- [ ] T18: SoundManager + wire SFX events
-- [ ] T25: KO slow-motion
+- [x] T10: FightEngine comprehensive tests
+- [x] T14: ComboCounter + CooldownIndicator UI
+- [x] T15: Wire combo UI + events into FightScene
+- [x] T18: SoundManager + wire SFX events
+- [x] T25: KO slow-motion
 
 ### Wave 5
-- [ ] T19: Load audio in Preloader + music + announcer
-- [ ] T20: UI sounds
-- [ ] T21: Mute button
-- [ ] T23: Victory screen layout overhaul
-- [ ] T28: Copy invite link button
-- [ ] T31: Auto-reconnect client
+- [x] T19: Load audio in Preloader + music + announcer
+- [x] T20: UI sounds
+- [x] T21: Mute button
+- [x] T23: Victory screen layout overhaul
+- [x] T28: Copy invite link button
+- [x] T31: Auto-reconnect client
 
 ### Wave 6
-- [ ] T32: Update server for Phase 3
-- [ ] T24: Victory confetti
+- [x] T32: Update server for Phase 3
+- [x] T24: Victory confetti
 
 ### Wave 7
-- [ ] T33: Integration testing
-- [ ] T34: Mobile testing
-- [ ] T35: Deploy + update docs
+- [x] T33: Integration testing
+- [x] T34: Mobile testing
+- [x] T35: Deploy + update docs
 
 ---
 

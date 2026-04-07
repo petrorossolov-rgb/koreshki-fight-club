@@ -610,6 +610,12 @@
 - **Prevention**: After setting server URL, always verify with a health check (`curl https://server/health`) before deploying client. Document the exact production URL in deploy docs.
 - **Time to resolve**: 1 cycle (WebFetch confirmed TLS error, user provided correct URL)
 
+## [2026-04-07] — [T03] Skeleton system + animation keyframes + size scaling (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs` (new), `scripts/lib/__tests__/gen-sprites.test.mjs` (new)
+- **Learnings**: 12-joint hierarchy with linear interpolation and pixel snap is sufficient for chibi sprites. Dead animation bounce adds humor with just 5 keyframes.
+- **Patterns**: `Pose = Record<Joint, {x,y}>` with offsets from root (feet=0,0), Y-axis negative=up. `generateAnimFrames(keyframes, totalFrames)` interpolates between sorted keyframes. `scalePose(pose, sx, sy)` for size categories. 22 tests cover interpolation, frame generation, scaling, and animation data integrity.
+
 ## [2026-04-05] — INCIDENT: Room code screen instantly replaced by CharacterSelect
 - **Symptom**: CREATE ROOM shows no room code or invite link — user goes straight to fighter select with "Ожидание соперника..."
 - **Root cause**: Server sends `room_created` + `room_joined` back-to-back to creator. `onRoomJoined` navigated to CharacterSelect for both creator and joiner, instantly overwriting the room code view.
@@ -663,3 +669,33 @@
 - **Drift items resolved**: 3
 - **Remaining debt**: 0
 - **Baseline commit**: 94d0023
+
+## [2026-04-07] — [T04] Body part renderer (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs`, `scripts/lib/__tests__/gen-sprites.test.mjs`
+- **Learnings**: Hair oval overlaps head center — test skin color at head bottom (+7px), not center. 9-layer draw order gives correct visual depth without z-sorting.
+- **Patterns**: Root position: (63, 82) in 126×126 frame. Limbs = drawLine between joints. Head = fillCircle, torso = fillRect, hair = fillOval offset above head.
+
+## [2026-04-07] — [T05] Preview tool (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/preview-sprite.mjs` (new), `.gitignore`
+- **Learnings**: 4× zoom at 11×7 grid = 5544×3528px — large but compresses well (~135KB PNG). FrameBuffer per-frame + blit is clean pattern.
+- **Patterns**: `preview-*.png` in .gitignore. Default charId fallback via `process.argv[2] || 'petyaj'`.
+
+## [2026-04-07] — [T06] Frame grid assembly + first character (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs`, `scripts/lib/__tests__/gen-sprites.test.mjs`, `scripts/preview-sprite.mjs`, `public/assets/fighters/petyaj.png` (new)
+- **Learnings**: assembleSheet uses blit to compose frames into grid — simple and fast. petyaj.png = 14.8KB for 1386×882 sheet.
+- **Patterns**: CHARACTER_VISUALS map: `{category, visuals}` per character. CLI detects direct execution via `fileURLToPath(import.meta.url) === process.argv[1]`.
+
+## [2026-04-07] — [T07] Hair styles renderer (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs`, `scripts/lib/__tests__/gen-sprites.test.mjs`
+- **Learnings**: 8 styles using compositions of fillRect/fillCircle/fillOval/drawLine. Afro = large circle (1.7× head radius). Mohawk = tall central rectangle. Dreadlocks = cap + hanging line strands.
+- **Patterns**: `renderHair(fb, cx, cy, r, style, color)` — all styles draw relative to head center + radius. Switch-based dispatch, fallback to 'short'.
+
+## [2026-04-07] — [T08] Accessories renderer + face details (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `scripts/gen-sprites.mjs`, `scripts/lib/__tests__/gen-sprites.test.mjs`
+- **Learnings**: Gloves handled at hand-rendering level (handColor override), not in renderAccessories. Multiple accessories can combine (array-based).
+- **Patterns**: `renderFace(fb, cx, cy, r, visuals)` — eyes + optional beard. `renderAccessories(fb, cx, cy, r, visuals)` — helmet/headphones/glasses/mask drawn over head, gloves = handColor swap in renderFrame.
