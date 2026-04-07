@@ -509,3 +509,64 @@ describe('renderAccessories', () => {
         assert.equal(nonTransparent, 0, 'No accessories should produce no pixels');
     });
 });
+
+// ── T09: CHARACTER_VISUALS completeness ─────────────────────────────
+
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __test_dirname = dirname(fileURLToPath(import.meta.url));
+const manifestPath = join(__test_dirname, '..', '..', '..', 'public', 'data', 'characters', 'manifest.json');
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+const manifestIds = manifest.characters.map(c => c.id);
+
+describe('CHARACTER_VISUALS (T09)', () => {
+    it('has all 17 character IDs', () => {
+        assert.equal(Object.keys(CHARACTER_VISUALS).length, 17, 'Should have 17 characters');
+        for (const id of manifestIds) {
+            assert.ok(CHARACTER_VISUALS[id], `Missing CHARACTER_VISUALS for: ${id}`);
+        }
+    });
+
+    it('categories match manifest.json', () => {
+        for (const ch of manifest.characters) {
+            const entry = CHARACTER_VISUALS[ch.id];
+            assert.equal(entry.category, ch.category,
+                `${ch.id}: category "${entry.category}" !== manifest "${ch.category}"`);
+        }
+    });
+
+    it('no two characters share identical hairStyle + hairColor + torsoColor', () => {
+        const seen = new Set();
+        for (const [id, entry] of Object.entries(CHARACTER_VISUALS)) {
+            const v = entry.visuals;
+            const key = `${v.hairStyle ?? 'short'}|${v.hairColor.join(',')}|${v.torsoColor.join(',')}`;
+            assert.ok(!seen.has(key), `Duplicate visual signature for ${id}: ${key}`);
+            seen.add(key);
+        }
+    });
+
+    it('all required color fields are present', () => {
+        for (const [id, entry] of Object.entries(CHARACTER_VISUALS)) {
+            const v = entry.visuals;
+            assert.ok(v.skinColor, `${id}: missing skinColor`);
+            assert.ok(v.hairColor, `${id}: missing hairColor`);
+            assert.ok(v.torsoColor, `${id}: missing torsoColor`);
+            assert.ok(v.pantsColor, `${id}: missing pantsColor`);
+            assert.ok(v.shoeColor, `${id}: missing shoeColor`);
+        }
+    });
+
+    it('each character produces a valid PNG', () => {
+        for (const id of manifestIds) {
+            const entry = CHARACTER_VISUALS[id];
+            const png = assembleSheet(id, entry.visuals, entry.category);
+            assert.equal(png[0], 0x89, `${id}: bad PNG signature byte 0`);
+            assert.equal(png[1], 0x50, `${id}: bad PNG signature byte 1`);
+            assert.equal(png[2], 0x4E, `${id}: bad PNG signature byte 2`);
+            assert.equal(png[3], 0x47, `${id}: bad PNG signature byte 3`);
+            assert.ok(png.length > 1000, `${id}: PNG too small (${png.length} bytes)`);
+        }
+    });
+});
