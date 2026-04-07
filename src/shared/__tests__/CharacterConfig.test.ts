@@ -76,6 +76,24 @@ describe('Character configs (via manifest)', () => {
             expect(config.spriteSheet).toBe(`assets/fighters/${entry.id}.png`);
         });
 
+        it('has neutral tint and unit scale', () => {
+            expect(config.tint).toBe(0xFFFFFF);
+            expect(config.scale).toBe(1.0);
+        });
+
+        it('spritesheet PNG file exists', () => {
+            const pngPath = path.resolve(__dirname, '../../../public', config.spriteSheet);
+            expect(fs.existsSync(pngPath)).toBe(true);
+        });
+
+        it('portrait PNG file exists', () => {
+            const portraitPath = path.resolve(
+                __dirname,
+                `../../../public/assets/fighters/${entry.id}-portrait.png`,
+            );
+            expect(fs.existsSync(portraitPath)).toBe(true);
+        });
+
         it('has valid numeric stats', () => {
             expect(config.walkSpeed).toBeGreaterThan(0);
             expect(config.maxHp).toBeGreaterThan(0);
