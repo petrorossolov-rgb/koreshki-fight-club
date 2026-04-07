@@ -28,7 +28,7 @@ vite/           — Vite build configs
 - **Bundler:** Vite 6
 - **Hosting (client):** GitHub Pages
 - **Hosting (server):** Deno Deploy
-- **Sprites:** LuizMelo packs (CC0) with scale/palette/accessories customization
+- **Sprites:** Procedural chibi sprites (generated via `scripts/gen-sprites.mjs`)
 - **Touch controls:** nipplejs + custom buttons
 
 ## Architecture
@@ -71,6 +71,8 @@ node scripts/gen-characters.mjs  # regenerate 17 character JSON configs
 node scripts/gen-audio.mjs       # regenerate procedural WAV sound effects
 node scripts/gen-bg.mjs          # regenerate fight scene background
 node scripts/gen-logo.mjs        # regenerate game logo
+node scripts/gen-sprites.mjs     # regenerate 17 chibi spritesheets + portraits
+node scripts/preview-sprite.mjs [id]  # preview single character at 4× zoom
 ```
 
 ## Phases

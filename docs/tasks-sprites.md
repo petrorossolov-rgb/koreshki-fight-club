@@ -509,8 +509,8 @@ Based on: [docs/plan-sprites.md](docs/plan-sprites.md)
 - [x] T14: Redesign CharacterSelect.ts — adaptive grid + portraits
 
 ### Wave 11
-- [ ] T15: End-to-end testing + cleanup
-- [ ] T16: Update CLAUDE.md + documentation
+- [x] T15: End-to-end testing + cleanup
+- [x] T16: Update CLAUDE.md + documentation
 
 ---
 
