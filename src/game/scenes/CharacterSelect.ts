@@ -30,18 +30,12 @@ interface ManifestData {
 
 // ── Constants ─────────────────────────────────────────────────────
 
-const GRID_COLS = 6;
-const GRID_ROWS = 3;
-const CELL_W = 140;
-const CELL_H = 80;
-const CELL_GAP = 12;
-const GRID_TOP = 70;
-const GRID_LEFT_BASE = 512; // center of 1024
+const GAME_W = 1024;
+const GAME_H = 576;
 
-const SHARED_TEXTURE = 'martial-hero';
-
-const DETAIL_Y = 340;
-const DETAIL_H = 180;
+const CELL_GAP = 10;
+const GRID_TOP = 60;
+const GRID_BOTTOM = 470; // leave room for confirm button
 
 const STAT_COLORS: Record<string, number> = {
     power: 0xff4444,
@@ -57,6 +51,8 @@ const STAT_MAX = 8;
 const BAR_W = 120;
 const BAR_H = 14;
 
+const MIN_TOUCH_SIZE = 44;
+
 // ── Scene ─────────────────────────────────────────────────────────
 
 export class CharacterSelect extends Scene {
@@ -64,19 +60,25 @@ export class CharacterSelect extends Scene {
     private manifest!: ManifestData;
     private entries: ManifestEntry[] = [];
 
+    // Grid layout (computed dynamically)
+    private gridCols = 6;
+    private cellSize = 130;
+
     // Grid state
     private cells: GameObjects.Container[] = [];
     selectedIndex = -1;
     private highlightBorder: GameObjects.Rectangle | null = null;
+    private pulseTween: Phaser.Tweens.Tween | null = null;
 
-    // Detail panel
+    // Detail panel (slide-up overlay)
     private detailContainer!: GameObjects.Container;
-    private previewSprite: GameObjects.Sprite | null = null;
+    private previewImage: GameObjects.Image | null = null;
     private detailName!: GameObjects.Text;
     private detailNickname!: GameObjects.Text;
     private detailDesc!: GameObjects.Text;
     private statBars: GameObjects.Rectangle[] = [];
     private statLabels: GameObjects.Text[] = [];
+    private isMobile = false;
 
     // Flow state
     private headerText!: GameObjects.Text;
@@ -102,10 +104,11 @@ export class CharacterSelect extends Scene {
         this.data_ = data ?? { mode: 'local' };
         this.selectedIndex = -1;
         this.highlightBorder = null;
+        this.pulseTween = null;
         this.cells = [];
         this.statBars = [];
         this.statLabels = [];
-        this.previewSprite = null;
+        this.previewImage = null;
         this.currentPlayer = 0;
         this.lockedChoices = [null, null];
         this.waitingForOpponent = false;
@@ -120,9 +123,25 @@ export class CharacterSelect extends Scene {
         this.manifest = this.cache.json.get('char_manifest') as ManifestData;
         this.entries = this.manifest.characters;
 
-        // Header (updated per player in local mode)
-        this.headerText = this.add.text(512, 30, '', {
-            fontFamily: 'Arial Black', fontSize: '32px', color: '#ffffff',
+        // Determine layout based on actual viewport width
+        const viewW = window.innerWidth;
+        this.isMobile = viewW < 768;
+        this.gridCols = viewW < 480 ? 3 : viewW < 768 ? 4 : 6;
+
+        // Calculate cell size to fit available space
+        const totalCells = this.entries.length + 1; // +1 for random
+        const rows = Math.ceil(totalCells / this.gridCols);
+        const availW = GAME_W - 60; // margins
+        const availH = GRID_BOTTOM - GRID_TOP;
+        const maxCellW = Math.floor((availW - (this.gridCols - 1) * CELL_GAP) / this.gridCols);
+        const maxCellH = Math.floor((availH - (rows - 1) * CELL_GAP) / rows);
+        this.cellSize = Math.min(130, maxCellW, maxCellH);
+        // Ensure minimum touch target
+        this.cellSize = Math.max(this.cellSize, MIN_TOUCH_SIZE);
+
+        // Header
+        this.headerText = this.add.text(GAME_W / 2, 28, '', {
+            fontFamily: 'Arial Black', fontSize: '28px', color: '#ffffff',
             stroke: '#000000', strokeThickness: 4,
         }).setOrigin(0.5);
 
@@ -132,10 +151,8 @@ export class CharacterSelect extends Scene {
 
         // Start flow
         if (this.data_.mode === 'local') {
-            // Local mode: characterSelected listener set per player turn in setPlayerTurn
             this.setPlayerTurn(0);
         } else {
-            // Online mode: single selection
             this.headerText.setText('ВЫБЕРИ БОЙЦА');
             this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
                 this.updateDetailPanel(entry);
@@ -150,25 +167,24 @@ export class CharacterSelect extends Scene {
     // ── Grid ──────────────────────────────────────────────────────
 
     private createGrid(): void {
-        const totalW = GRID_COLS * CELL_W + (GRID_COLS - 1) * CELL_GAP;
-        const startX = GRID_LEFT_BASE - totalW / 2 + CELL_W / 2;
-        const startY = GRID_TOP + CELL_H / 2;
-
-        // 17 characters + 1 "?" cell = 18 = 6×3
-        const totalCells = GRID_COLS * GRID_ROWS;
+        const totalCells = this.entries.length + 1;
+        const rows = Math.ceil(totalCells / this.gridCols);
+        const totalW = this.gridCols * this.cellSize + (this.gridCols - 1) * CELL_GAP;
+        const totalH = rows * this.cellSize + (rows - 1) * CELL_GAP;
+        const startX = GAME_W / 2 - totalW / 2 + this.cellSize / 2;
+        const startY = GRID_TOP + (GRID_BOTTOM - GRID_TOP) / 2 - totalH / 2 + this.cellSize / 2;
 
         for (let i = 0; i < totalCells; i++) {
-            const col = i % GRID_COLS;
-            const row = Math.floor(i / GRID_COLS);
-            const cx = startX + col * (CELL_W + CELL_GAP);
-            const cy = startY + row * (CELL_H + CELL_GAP);
+            const col = i % this.gridCols;
+            const row = Math.floor(i / this.gridCols);
+            const cx = startX + col * (this.cellSize + CELL_GAP);
+            const cy = startY + row * (this.cellSize + CELL_GAP);
 
             if (i < this.entries.length) {
                 this.createCharCell(i, cx, cy, this.entries[i]);
-            } else if (i === this.entries.length) {
+            } else {
                 this.createRandomCell(i, cx, cy);
             }
-            // remaining cells stay empty (currently exactly 18 = 17+1)
         }
     }
 
@@ -176,17 +192,19 @@ export class CharacterSelect extends Scene {
         const container = this.add.container(cx, cy);
 
         // Dark background
-        const bg = this.add.rectangle(0, 0, CELL_W, CELL_H, 0x1a1a3e)
+        const bg = this.add.rectangle(0, 0, this.cellSize, this.cellSize, 0x1a1a3e)
             .setStrokeStyle(2, 0x333366);
 
-        // Tinted portrait sprite (small thumbnail)
-        const sprite = this.add.sprite(0, -5, SHARED_TEXTURE, entry.stats.power > 0 ? 0 : 0);
-        sprite.setScale(0.4);
-        if (entry.tint !== 0xFFFFFF) sprite.setTint(entry.tint);
+        // Character sprite: idle frame 0 from character's own spritesheet
+        const sprite = this.add.sprite(0, -8, entry.id, 0);
+        // Scale sprite to fit cell with some padding
+        const spriteScale = (this.cellSize - 30) / 126; // 126 = frame size
+        sprite.setScale(spriteScale);
 
         // Name text below sprite
-        const nameText = this.add.text(0, 28, entry.displayName, {
-            fontFamily: 'Arial', fontSize: '12px', color: '#cccccc',
+        const fontSize = this.cellSize < 80 ? '10px' : '12px';
+        const nameText = this.add.text(0, this.cellSize / 2 - 14, entry.displayName, {
+            fontFamily: 'Arial', fontSize, color: '#cccccc',
             align: 'center',
         }).setOrigin(0.5);
 
@@ -201,16 +219,18 @@ export class CharacterSelect extends Scene {
     private createRandomCell(index: number, cx: number, cy: number): void {
         const container = this.add.container(cx, cy);
 
-        const bg = this.add.rectangle(0, 0, CELL_W, CELL_H, 0x1a1a3e)
+        const bg = this.add.rectangle(0, 0, this.cellSize, this.cellSize, 0x1a1a3e)
             .setStrokeStyle(2, 0x333366);
 
-        const questionMark = this.add.text(0, -2, '?', {
-            fontFamily: 'Arial Black', fontSize: '36px', color: '#ffcc00',
+        const qSize = this.cellSize < 80 ? '28px' : '36px';
+        const questionMark = this.add.text(0, -4, '?', {
+            fontFamily: 'Arial Black', fontSize: qSize, color: '#ffcc00',
             stroke: '#000000', strokeThickness: 3,
         }).setOrigin(0.5);
 
-        const label = this.add.text(0, 28, 'RANDOM', {
-            fontFamily: 'Arial', fontSize: '12px', color: '#cccccc',
+        const fontSize = this.cellSize < 80 ? '10px' : '12px';
+        const label = this.add.text(0, this.cellSize / 2 - 14, 'RANDOM', {
+            fontFamily: 'Arial', fontSize, color: '#cccccc',
             align: 'center',
         }).setOrigin(0.5);
 
@@ -226,57 +246,86 @@ export class CharacterSelect extends Scene {
     private createDetailPanel(): void {
         this.detailContainer = this.add.container(0, 0);
 
-        // Background panel
-        const panelBg = this.add.rectangle(512, DETAIL_Y + DETAIL_H / 2, 920, DETAIL_H, 0x111128, 0.85)
-            .setStrokeStyle(1, 0x333366);
-        this.detailContainer.add(panelBg);
+        if (this.isMobile) {
+            // Mobile: slide-up overlay covering bottom half
+            const panelBg = this.add.rectangle(GAME_W / 2, GAME_H, GAME_W, GAME_H * 0.55, 0x111128, 0.95)
+                .setStrokeStyle(1, 0x333366).setOrigin(0.5, 1);
+            this.detailContainer.add(panelBg);
 
-        // Name (center-left)
-        this.detailName = this.add.text(280, DETAIL_Y + 15, '', {
-            fontFamily: 'Arial Black', fontSize: '26px', color: '#ffffff',
-            stroke: '#000000', strokeThickness: 3,
-        });
-        this.detailContainer.add(this.detailName);
+            const panelTop = GAME_H * 0.45;
 
-        // Nickname
-        this.detailNickname = this.add.text(280, DETAIL_Y + 50, '', {
-            fontFamily: 'Arial', fontSize: '18px', color: '#ffcc00',
-            fontStyle: 'italic',
-        });
-        this.detailContainer.add(this.detailNickname);
+            // Portrait on left
+            this.detailName = this.add.text(220, panelTop + 15, '', {
+                fontFamily: 'Arial Black', fontSize: '22px', color: '#ffffff',
+                stroke: '#000000', strokeThickness: 3,
+            });
+            this.detailContainer.add(this.detailName);
 
-        // Description
-        this.detailDesc = this.add.text(280, DETAIL_Y + 80, '', {
-            fontFamily: 'Arial', fontSize: '14px', color: '#aaaaaa',
-            wordWrap: { width: 360 },
-        });
-        this.detailContainer.add(this.detailDesc);
+            this.detailNickname = this.add.text(220, panelTop + 44, '', {
+                fontFamily: 'Arial', fontSize: '16px', color: '#ffcc00',
+                fontStyle: 'italic',
+            });
+            this.detailContainer.add(this.detailNickname);
 
-        // Stat bars (right side)
-        const statX = 720;
+            this.detailDesc = this.add.text(220, panelTop + 70, '', {
+                fontFamily: 'Arial', fontSize: '13px', color: '#aaaaaa',
+                wordWrap: { width: 320 },
+            });
+            this.detailContainer.add(this.detailDesc);
+
+            // Stats
+            this.createStatBars(600, panelTop + 20);
+        } else {
+            // Desktop: fixed panel below grid
+            const panelY = GRID_BOTTOM + 5;
+            const panelH = GAME_H - panelY - 10;
+            const panelBg = this.add.rectangle(GAME_W / 2, panelY + panelH / 2, 960, panelH, 0x111128, 0.85)
+                .setStrokeStyle(1, 0x333366);
+            this.detailContainer.add(panelBg);
+
+            this.detailName = this.add.text(260, panelY + 8, '', {
+                fontFamily: 'Arial Black', fontSize: '24px', color: '#ffffff',
+                stroke: '#000000', strokeThickness: 3,
+            });
+            this.detailContainer.add(this.detailName);
+
+            this.detailNickname = this.add.text(260, panelY + 38, '', {
+                fontFamily: 'Arial', fontSize: '16px', color: '#ffcc00',
+                fontStyle: 'italic',
+            });
+            this.detailContainer.add(this.detailNickname);
+
+            this.detailDesc = this.add.text(260, panelY + 62, '', {
+                fontFamily: 'Arial', fontSize: '13px', color: '#aaaaaa',
+                wordWrap: { width: 360 },
+            });
+            this.detailContainer.add(this.detailDesc);
+
+            this.createStatBars(700, panelY + 12);
+        }
+
+        this.detailContainer.setVisible(false);
+    }
+
+    private createStatBars(x: number, startY: number): void {
         const statKeys = ['power', 'speed', 'health'];
         for (let i = 0; i < statKeys.length; i++) {
             const key = statKeys[i];
-            const y = DETAIL_Y + 25 + i * (BAR_H + 14);
+            const y = startY + i * (BAR_H + 12);
 
-            const label = this.add.text(statX, y, STAT_LABELS[key], {
+            const label = this.add.text(x, y, STAT_LABELS[key], {
                 fontFamily: 'Arial', fontSize: '13px', color: '#cccccc',
             }).setOrigin(0, 0.5);
             this.detailContainer.add(label);
             this.statLabels.push(label);
 
-            // Bar background
-            const barBg = this.add.rectangle(statX + 40, y, BAR_W, BAR_H, 0x222244).setOrigin(0, 0.5);
+            const barBg = this.add.rectangle(x + 40, y, BAR_W, BAR_H, 0x222244).setOrigin(0, 0.5);
             this.detailContainer.add(barBg);
 
-            // Bar fill
-            const bar = this.add.rectangle(statX + 40, y, 0, BAR_H, STAT_COLORS[key]).setOrigin(0, 0.5);
+            const bar = this.add.rectangle(x + 40, y, 0, BAR_H, STAT_COLORS[key]).setOrigin(0, 0.5);
             this.detailContainer.add(bar);
             this.statBars.push(bar);
         }
-
-        // Initially hidden until a character is selected
-        this.detailContainer.setVisible(false);
     }
 
     private updateDetailPanel(entry: ManifestEntry): void {
@@ -293,44 +342,48 @@ export class CharacterSelect extends Scene {
             this.statBars[i].width = (value / STAT_MAX) * BAR_W;
         }
 
-        // Update preview sprite
-        if (this.previewSprite) {
-            this.previewSprite.destroy();
-            this.previewSprite = null;
+        // Update portrait image
+        if (this.previewImage) {
+            this.previewImage.destroy();
+            this.previewImage = null;
         }
 
-        // Create idle animation for preview
-        const animKey = `preview_${entry.id}_idle`;
-        if (!this.anims.exists(animKey)) {
-            // idle animation: frames 0-9 (same for all chars sharing the spritesheet)
-            this.anims.create({
-                key: animKey,
-                frames: this.anims.generateFrameNumbers(SHARED_TEXTURE, { start: 0, end: 9 }),
-                frameRate: 10,
-                repeat: -1,
+        const portraitKey = `${entry.id}-portrait`;
+        if (this.textures.exists(portraitKey)) {
+            const imgY = this.isMobile ? GAME_H * 0.45 + 60 : GRID_BOTTOM + 50;
+            const imgX = this.isMobile ? 100 : 130;
+            const imgScale = this.isMobile ? 0.55 : 0.6;
+
+            this.previewImage = this.add.image(imgX, imgY, portraitKey);
+            this.previewImage.setScale(imgScale);
+            this.detailContainer.add(this.previewImage);
+        }
+
+        // Mobile: slide-up animation
+        if (this.isMobile && !this.detailContainer.getData('shown')) {
+            this.detailContainer.setData('shown', true);
+            this.detailContainer.y = 200;
+            this.tweens.add({
+                targets: this.detailContainer,
+                y: 0,
+                duration: 250,
+                ease: 'Back.easeOut',
             });
         }
-
-        this.previewSprite = this.add.sprite(140, DETAIL_Y + DETAIL_H / 2 + 20, SHARED_TEXTURE);
-        this.previewSprite.setOrigin(0.5, 1);
-        this.previewSprite.play(animKey);
-
-        // Apply character visual properties
-        // Scale relative to 1.0: show at ~1.5x for nice preview size
-        this.previewSprite.setScale(entry.category === 'big' ? 1.5 : entry.category === 'tall' ? 1.4 : entry.category === 'short' ? 1.1 : 1.3);
-        if (entry.tint !== 0xFFFFFF) this.previewSprite.setTint(entry.tint);
-
-        this.detailContainer.add(this.previewSprite);
     }
 
     // ── Confirm Button ────────────────────────────────────────────
 
     private createConfirmButton(): void {
-        this.confirmBtn = this.add.rectangle(512, 540, 280, 48, 0x333355)
+        const btnW = this.isMobile ? GAME_W - 40 : 280;
+        const btnH = Math.max(48, MIN_TOUCH_SIZE);
+        const btnY = GAME_H - 30;
+
+        this.confirmBtn = this.add.rectangle(GAME_W / 2, btnY, btnW, btnH, 0x333355)
             .setStrokeStyle(2, 0xffffff)
             .setInteractive({ useHandCursor: true });
 
-        this.confirmText = this.add.text(512, 540, 'ПОДТВЕРДИТЬ', {
+        this.confirmText = this.add.text(GAME_W / 2, btnY, 'ПОДТВЕРДИТЬ', {
             fontFamily: 'Arial Black', fontSize: '22px', color: '#ffffff',
         }).setOrigin(0.5);
 
@@ -338,7 +391,6 @@ export class CharacterSelect extends Scene {
         this.confirmBtn.on('pointerout', () => { this.confirmBtn.fillColor = 0x333355; });
         this.confirmBtn.on('pointerdown', () => this.onConfirm());
 
-        // Hidden until a character is selected
         this.confirmBtn.setVisible(false);
         this.confirmText.setVisible(false);
     }
@@ -357,7 +409,9 @@ export class CharacterSelect extends Scene {
             this.highlightBorder.destroy();
             this.highlightBorder = null;
         }
+        this.stopPulseTween();
         this.detailContainer.setVisible(false);
+        this.detailContainer.setData('shown', false);
         this.showConfirmButton(false);
 
         const color = player === 0 ? '#4488ff' : '#ff4444';
@@ -365,12 +419,10 @@ export class CharacterSelect extends Scene {
         this.headerText.setText(`${label}: ВЫБЕРИ БОЙЦА`);
         this.headerText.setColor(color);
 
-        // Update highlight color for this player
         this.events.removeAllListeners('characterSelected');
         this.events.on('characterSelected', (_index: number, entry: ManifestEntry) => {
             this.updateDetailPanel(entry);
             this.showConfirmButton(true);
-            // Update highlight border color per player
             if (this.highlightBorder) {
                 this.highlightBorder.setStrokeStyle(3, player === 0 ? 0x4488ff : 0xff4444);
             }
@@ -386,15 +438,12 @@ export class CharacterSelect extends Scene {
             this.lockedChoices[this.currentPlayer] = entry;
 
             if (this.currentPlayer === 0) {
-                // Lock P1 choice visually
                 this.showP1Lock(entry);
                 this.setPlayerTurn(1);
             } else {
-                // Both selected — load configs and start fight
                 this.loadConfigsAndStart();
             }
         } else {
-            // Online mode — send selection to server
             this.onOnlineConfirm(entry);
         }
     }
@@ -434,7 +483,6 @@ export class CharacterSelect extends Scene {
         this.waitingForOpponent = true;
         net.selectCharacter(entry.id);
 
-        // Disable grid interaction
         this.cells.forEach(cell => {
             cell.each((child: GameObjects.GameObject) => {
                 if (child instanceof GameObjects.Rectangle) {
@@ -443,18 +491,17 @@ export class CharacterSelect extends Scene {
             });
         });
 
-        // Show waiting state
         this.showConfirmButton(false);
         this.headerText.setText('Ожидание соперника...');
         this.headerText.setColor('#ffcc00');
 
-        this.add.text(512, 540, 'Ваш выбор подтверждён', {
+        this.add.text(GAME_W / 2, GAME_H - 30, 'Ваш выбор подтверждён', {
             fontFamily: 'Arial', fontSize: '18px', color: '#66ff66',
         }).setOrigin(0.5);
     }
 
     private showOpponentCheckmark(): void {
-        this.add.text(512, 560, '✓ Соперник выбрал бойца', {
+        this.add.text(GAME_W / 2, GAME_H - 10, '✓ Соперник выбрал бойца', {
             fontFamily: 'Arial', fontSize: '16px', color: '#66ff66',
         }).setOrigin(0.5);
     }
@@ -462,7 +509,6 @@ export class CharacterSelect extends Scene {
     private onlineFightStart(playerIndex: 0 | 1, p1CharId: string, p2CharId: string): void {
         this.cleanupOnlineCallbacks();
 
-        // Collect unique files to load
         const toLoad: { id: string; file: string }[] = [];
         for (const charId of [p1CharId, p2CharId]) {
             if (!this.cache.json.has(charId)) {
@@ -507,9 +553,8 @@ export class CharacterSelect extends Scene {
     // ── Local Flow Helpers ────────────────────────────────────────
 
     private showP1Lock(_entry: ManifestEntry): void {
-        // Dim overlay on the locked cell
         const cell = this.cells[this.selectedIndex];
-        this.add.rectangle(cell.x, cell.y, CELL_W, CELL_H, 0x4488ff, 0.3);
+        this.add.rectangle(cell.x, cell.y, this.cellSize, this.cellSize, 0x4488ff, 0.3);
         const lockText = this.add.text(cell.x, cell.y - 20, 'P1', {
             fontFamily: 'Arial Black', fontSize: '16px', color: '#4488ff',
             stroke: '#000000', strokeThickness: 3,
@@ -525,7 +570,6 @@ export class CharacterSelect extends Scene {
         this.headerText.setColor('#ffffff');
         this.showConfirmButton(false);
 
-        // Collect unique files to load
         const toLoad: { id: string; file: string }[] = [];
         if (!this.cache.json.has(p1Entry.id)) {
             toLoad.push({ id: p1Entry.id, file: p1Entry.file });
@@ -565,7 +609,6 @@ export class CharacterSelect extends Scene {
     selectCell(index: number): void {
         if (this.isRandomCycling) return;
 
-        // Random cell → cycling animation then random pick
         if (index === this.entries.length) {
             this.startRandomCycle();
             return;
@@ -581,44 +624,63 @@ export class CharacterSelect extends Scene {
 
         // Update highlight
         if (this.highlightBorder) this.highlightBorder.destroy();
+        this.stopPulseTween();
 
         const cell = this.cells[index];
         this.highlightBorder = this.add.rectangle(
-            cell.x, cell.y, CELL_W + 6, CELL_H + 6
+            cell.x, cell.y, this.cellSize + 6, this.cellSize + 6
         ).setStrokeStyle(3, 0x44aaff).setFillStyle(0x000000, 0);
 
-        // Emit event for detail panel and confirm button
+        // Scale pulse on selected cell
+        cell.setScale(1);
+        this.pulseTween = this.tweens.add({
+            targets: cell,
+            scaleX: 1.08,
+            scaleY: 1.08,
+            duration: 400,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+
         this.events.emit('characterSelected', index, this.entries[index]);
+    }
+
+    private stopPulseTween(): void {
+        if (this.pulseTween) {
+            this.pulseTween.stop();
+            this.pulseTween = null;
+        }
+        // Reset all cell scales
+        this.cells.forEach(c => c?.setScale(1));
     }
 
     private startRandomCycle(): void {
         this.isRandomCycling = true;
         this.showConfirmButton(false);
 
-        const totalSteps = Phaser.Math.Between(12, 18); // 1.2–1.8s at 100ms
+        const totalSteps = Phaser.Math.Between(12, 18);
         let step = 0;
         let current = Phaser.Math.Between(0, this.entries.length - 1);
 
         const cycleOnce = () => {
-            // Pick next index (avoid repeating same cell)
             let next = Phaser.Math.Between(0, this.entries.length - 1);
             while (next === current && this.entries.length > 1) {
                 next = Phaser.Math.Between(0, this.entries.length - 1);
             }
             current = next;
 
-            // Visual highlight without emitting event (fast cycling)
             if (this.highlightBorder) this.highlightBorder.destroy();
+            this.stopPulseTween();
             const cell = this.cells[current];
             this.highlightBorder = this.add.rectangle(
-                cell.x, cell.y, CELL_W + 6, CELL_H + 6
+                cell.x, cell.y, this.cellSize + 6, this.cellSize + 6
             ).setStrokeStyle(3, 0xffcc00).setFillStyle(0x000000, 0);
 
             step++;
             if (step < totalSteps) {
                 this.time.delayedCall(100, cycleOnce);
             } else {
-                // Final selection
                 this.isRandomCycling = false;
                 this.applySelection(current);
             }
