@@ -723,3 +723,9 @@
 - **Files changed**: `src/game/scenes/Preloader.ts`
 - **Learnings**: Two-phase Phaser loading: preload() for manifest/audio/logo, create() reads manifest and queues character assets via `this.load.start()`. Progress bar from init() works across both phases since the `progress` listener is on the LoaderPlugin.
 - **Patterns**: `this.load.once('complete', callback)` + `this.load.start()` in create() for second-pass dynamic loading based on phase-1 data.
+
+## [2026-04-07] — [T13] Update CharacterConfig.test.ts for per-character paths (Sprites)
+- **Status**: ✅ Done
+- **Files changed**: `src/shared/__tests__/CharacterConfig.test.ts`
+- **Learnings**: Per-character spritesheet path assertion was already in place from T10. Added tint/scale/file-exists checks.
+- **Patterns**: None new — same vitest + fs.existsSync pattern.

@@ -503,7 +503,7 @@ Based on: [docs/plan-sprites.md](docs/plan-sprites.md)
 - [x] T12: Update Preloader.ts for dynamic spritesheet loading
 
 ### Wave 9
-- [ ] T13: Update CharacterConfig.test.ts for per-character paths
+- [x] T13: Update CharacterConfig.test.ts for per-character paths
 
 ### Wave 10
 - [ ] T14: Redesign CharacterSelect.ts — adaptive grid + portraits
